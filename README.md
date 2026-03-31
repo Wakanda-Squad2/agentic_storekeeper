@@ -1,36 +1,139 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agentic Storekeeper — Financial document intelligence (frontend)
 
-## Getting Started
+Next.js application for the **Agentic Storekeeper Financial Document Intelligence Platform**: multi-tenant dashboards, document ingestion UI, agent pipeline visibility, and structured insight responses aligned with a FastAPI + PostgreSQL + OpenAI Agent SDK backend.
 
-First, run the development server:
+## Stack
+
+| Layer | Technology |
+|--------|------------|
+| Framework | [Next.js 16](https://nextjs.org/) (App Router, React 19) |
+| UI | [shadcn/ui](https://ui.shadcn.com/) (Base UI) + [Tailwind CSS v4](https://tailwindcss.com/) |
+| Server state | [TanStack Query v5](https://tanstack.com/query) |
+| Client state | [Zustand](https://github.com/pmndrs/zustand) (tenant + notifications) |
+| Validation | [Zod](https://zod.dev/) — mirror FastAPI / agent JSON guardrails |
+| Charts | [Recharts](https://recharts.org/) (lazy-loaded, client-only) |
+| Uploads | [react-dropzone](https://react-dropzone.js.org/) + XHR progress + retries |
+
+Forms can use [React Hook Form](https://react-hook-form.com/) alongside Zod as backend contracts stabilize.
+
+## Prerequisites
+
+- Node.js 20+ (recommended)
+- npm (ships with Node)
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Variable | Purpose |
+|----------|---------|
+| `AUTH_SECRET` | Random string **≥ 32 characters** to sign session JWTs (production). Dev falls back to a built-in secret if unset. |
+| `NEXT_PUBLIC_API_URL` | FastAPI origin for server-side bridge `fetch` calls |
+| `NEXT_PUBLIC_USE_MOCK_DATA` | Omit or any value except `false` = mock REST + simulated SSE. Set `false` when FastAPI is live. |
+| `NEXT_PUBLIC_API_ALLOW_MOCK_FALLBACK` | `true` = client loaders fall back to mocks on API errors (dev only) |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+See [docs/openapi-codegen.md](docs/openapi-codegen.md) for keeping Zod and Pydantic in sync.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Authentication and onboarding
 
-## Learn More
+- **Session:** JWT in httpOnly cookie `storekeeper_session` (`jose` HS256). Tenant cookie `tenant_id` stays in sync for APIs.
+- **Routes:** `/login`, `/register`, `/onboarding` (wizard). Demo users live in `src/lib/auth/credentials.ts`.
+- **Middleware:** Protects `/dashboard` and `/onboarding`; `/api/bridge/*` allows anonymous traffic only while mock mode is on (see `src/middleware.ts`).
+- **Live backend:** `POST /api/v1/auth/login` and optional `register` — shape documented in `src/lib/auth/credentials.ts` (`fastApiLogin`). Bridge forwards `Bearer` from session when `apiAccessToken` is set.
+- **Handover:** [HANDOVER.md](HANDOVER.md).
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server (default: [http://localhost:3000](http://localhost:3000)) |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest unit tests (`src/**/*.test.ts`) |
+| `npm run test:watch` | Vitest watch mode |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API bridge (BFF)
 
-## Deploy on Vercel
+Browser calls **same-origin** routes under `/api/bridge/*`. Each handler forwards `x-tenant-id` (and optional `Authorization`) to FastAPI and **re-validates** JSON with Zod before responding. That way charts never receive unvalidated financial payloads.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Bridge route | Upstream (configurable in `src/lib/config.ts`) |
+|--------------|------------------------------------------------|
+| `GET /api/bridge/financial-summary` | `GET {API}/api/v1/financial/summary` |
+| `GET/POST /api/bridge/documents` | Document list + multipart upload |
+| `GET /api/bridge/documents/[id]/pipeline/events` | SSE proxy (or mock stream) |
+| `GET /api/bridge/documents/[id]/audit` | Audit trail |
+| `PATCH /api/bridge/documents/[id]/parsed` | Human edits to parsed JSON |
+| `POST /api/bridge/documents/[id]/agents/reparse` | Re-run agents |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Agent pipeline events must match `src/schemas/agent-events.ts` (`agentPipelineEventSchema`, version `v: 1`). WebSockets can use the same payload shapes behind a small adapter.
+
+## Route map
+
+| Path | Purpose |
+|------|---------|
+| `/` | Redirects to `/dashboard` |
+| `/login` | Auth shell (placeholder; JWT/OAuth + roles still to wire) |
+| `/dashboard` | Validated KPIs + filters + lazy charts + recent documents (React Query) |
+| `/dashboard/transactions` | Drill-down shell (`category` / `vendor` query params) |
+| `/dashboard/documents` | XHR upload with progress, SSE stepper, validated document list |
+| `/dashboard/documents/[id]` | Preview, editable parsed JSON, audit trail, re-parse |
+| `/dashboard/reports/*` | Report stubs / demo charts |
+| `/dashboard/insights/ask` | Structured insight answers (`insightAnswerSchema`) |
+
+## Project structure (high level)
+
+```text
+src/
+├── app/
+│   ├── api/bridge/           # BFF: proxy + Zod validation
+│   ├── (auth)/login/
+│   └── dashboard/
+├── components/
+│   ├── dashboard/            # overview, filters, lazy charts
+│   ├── documents/           # upload, stepper, detail HITL
+│   ├── insights/
+│   ├── layout/              # shell, tenant, notifications
+│   └── ui/
+├── hooks/                    # e.g. useAgentPipelineStream (SSE)
+├── lib/
+│   ├── api/                  # fetchJsonValidated, domain loaders
+│   ├── dashboard/           # client-side filters (until API supports all params)
+│   ├── queries/             # TanStack Query keys
+│   └── upload/              # XHR progress + retries
+├── schemas/                  # Zod: financial, documents, agent-events
+├── stores/                   # tenant, notifications
+└── test/                     # Vitest setup
+```
+
+## Guardrails (frontend)
+
+- All dashboard figures go through `loadFinancialSummary` → bridge → **`financialSummarySchema.parse`** (or explicit mock flags).
+- SSE payloads go through **`agentPipelineMessageSchema`** / `unwrapAgentEvent` before updating the stepper.
+- Do **not** call MCP or PostgreSQL from the browser.
+- Multi-tenant: middleware sets `x-tenant-id` on **`/dashboard/*`** and **`/api/bridge/*`** from the `tenant_id` cookie.
+
+## Implemented vs still to harden
+
+| Area | Status |
+|------|--------|
+| Real REST + validation | Bridge + `fetchJsonValidated` / loaders |
+| SSE pipeline UI | `useAgentPipelineStream` + mock or FastAPI stream |
+| Upload progress / retries | XHR helper; multipart — server must accept large bodies / chunking if needed |
+| OCR / parse / validation errors | Typed codes in `PipelineErrorCode` + stepper `Alert` |
+| Schema sync with Pydantic | Documented in `docs/openapi-codegen.md`; CI contract tests recommended |
+| Drill-down | Links from donut + vendor table → `/dashboard/transactions` |
+| Notifications | In-app bell (`notification-store`) — push from upload success/failure |
+| Auth / RBAC | Login still placeholder |
+| Component/integration tests | Vitest + node tests started; add RTL + `*.test.tsx` when stable |
+
+## Why Next.js (vs Vite SPA)
+
+App Router layouts, middleware for tenant headers, and a first-party BFF for validation/streaming integrate cleanly with this backend. Vite remains suitable for isolated packages or tools.
+
+## License
+
+Private / unlicensed — align with your organization’s policy.
