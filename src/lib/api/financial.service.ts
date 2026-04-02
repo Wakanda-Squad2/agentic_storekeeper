@@ -1,4 +1,7 @@
-import { financialSummarySchema, type FinancialSummary } from "@/schemas/financial";
+import {
+  financialSummaryNormalizedSchema,
+  type FinancialSummary,
+} from "@/schemas/financial";
 import { fetchJsonValidated } from "@/lib/api/client";
 import {
   allowMockFallback,
@@ -32,17 +35,17 @@ export async function loadFinancialSummary(
   query: FinancialQuery = {},
 ): Promise<FinancialSummary> {
   if (useMockDataOnly()) {
-    return financialSummarySchema.parse(mockFinancialSummary);
+    return mockFinancialSummary;
   }
 
   try {
     return await fetchJsonValidated(
       `/api/bridge/financial-summary${buildQuery(query)}`,
-      { schema: financialSummarySchema },
+      { schema: financialSummaryNormalizedSchema },
     );
   } catch (e) {
     if (allowMockFallback() && e instanceof ApiError) {
-      return financialSummarySchema.parse(mockFinancialSummary);
+      return mockFinancialSummary;
     }
     throw e;
   }

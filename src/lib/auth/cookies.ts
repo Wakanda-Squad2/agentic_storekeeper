@@ -5,7 +5,10 @@ import {
   TENANT_COOKIE,
 } from "@/lib/auth/constants";
 
-const secure = process.env.NODE_ENV === "production";
+/** `Secure` cookies are not stored over plain http. Set AUTH_INSECURE_COOKIES=true for `next start` on http:// or LAN IP without TLS. */
+const secure =
+  process.env.NODE_ENV === "production" &&
+  process.env.AUTH_INSECURE_COOKIES !== "true";
 
 export function attachSessionCookies(
   res: NextResponse,

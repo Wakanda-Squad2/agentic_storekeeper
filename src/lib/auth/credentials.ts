@@ -1,4 +1,4 @@
-import { getApiBaseUrl, useMockDataOnly } from "@/lib/config";
+import { authUsesMockCredentials, getApiBaseUrl } from "@/lib/config";
 import type { SessionClaims } from "@/lib/auth/types";
 
 const MOCK_USERS: Record<
@@ -104,7 +104,7 @@ export async function loginWithPassword(
   email: string,
   password: string,
 ): Promise<SessionClaims | null> {
-  if (useMockDataOnly()) {
+  if (authUsesMockCredentials()) {
     return mockLogin(email, password);
   }
   return fastApiLogin(email, password);

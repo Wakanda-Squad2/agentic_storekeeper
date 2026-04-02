@@ -37,6 +37,29 @@ cp .env.example .env.local
 
 See [docs/openapi-codegen.md](docs/openapi-codegen.md) for keeping Zod and Pydantic in sync.
 
+### Troubleshooting
+
+**Tailwind “Cannot find native binding” / `Cannot find module '@tailwindcss/oxide-darwin-arm64'`**
+
+Tailwind v4’s Rust binary installs as an **optional** dependency; npm sometimes skips it ([npm#4828](https://github.com/npm/cli/issues/4828)). On the machine that fails:
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+Ensure optional packages are not omitted: `npm config get omit` — if you see `optional`, run `npm config delete omit` or `npm install --no-omit=optional`. On Apple Silicon, a fallback is `npm install @tailwindcss/oxide-darwin-arm64@4.2.2 --save-dev` (keep the version aligned with `tailwindcss` in your lockfile).
+
+**Dev server over LAN — “Blocked cross-origin request to … /_next/webpack-hmr”**
+
+When you open the app as `http://<your-LAN-IP>:3000` from another device, Next.js blocks dev-only endpoints unless that host is allowlisted. Add to `.env.local` (hostname only, no `http://`):
+
+```bash
+NEXT_DEV_ALLOWED_ORIGINS=192.168.0.104
+```
+
+Use your real IP; multiple values: `NEXT_DEV_ALLOWED_ORIGINS=192.168.0.104,10.0.0.5`. Restart `npm run dev`. One-shot: `NEXT_DEV_ALLOWED_ORIGINS=192.168.0.104 npm run dev`.
+
 ### Authentication and onboarding
 
 - **Session:** JWT in httpOnly cookie `storekeeper_session` (`jose` HS256). Tenant cookie `tenant_id` stays in sync for APIs.

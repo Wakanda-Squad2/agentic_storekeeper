@@ -16,6 +16,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { humanizeCategoryLabel } from "@/lib/format-category";
+import { formatMoney } from "@/lib/format-money";
 import type { FinancialSummary } from "@/schemas/financial";
 
 const COLORS = [
@@ -29,7 +31,8 @@ const COLORS = [
 
 export function ExpenseDonut({ data }: { data: FinancialSummary }) {
   const chartData = data.expenseByCategory.map((row) => ({
-    name: row.category,
+    name: humanizeCategoryLabel(row.category),
+    categoryKey: row.category,
     value: row.amount,
   }));
 
@@ -56,10 +59,9 @@ export function ExpenseDonut({ data }: { data: FinancialSummary }) {
             <Tooltip
               formatter={(value) =>
                 typeof value === "number"
-                  ? new Intl.NumberFormat("en-US", {
-                      style: "currency",
-                      currency: "USD",
-                    }).format(value)
+                  ? formatMoney(value, data.currency, {
+                      maximumFractionDigits: 2,
+                    })
                   : String(value ?? "")
               }
             />
@@ -72,8 +74,8 @@ export function ExpenseDonut({ data }: { data: FinancialSummary }) {
         <div className="flex max-h-24 flex-wrap gap-x-3 gap-y-1 overflow-y-auto text-xs">
           {chartData.map((row) => (
             <Link
-              key={row.name}
-              href={`/dashboard/transactions?category=${encodeURIComponent(row.name)}`}
+              key={row.categoryKey}
+              href={`/dashboard/transactions?category=${encodeURIComponent(row.categoryKey)}`}
               className="text-primary underline-offset-4 hover:underline"
             >
               {row.name}

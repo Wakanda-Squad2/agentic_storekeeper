@@ -11,16 +11,11 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatMoney } from "@/lib/format-money";
 import type { FinancialSummary } from "@/schemas/financial";
 
-const money = (v: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(v);
-
 export function MonthlyTrend({ data }: { data: FinancialSummary }) {
+  const money = (v: number) => formatMoney(v, data.currency);
   return (
     <Card className="min-h-[320px]">
       <CardHeader>

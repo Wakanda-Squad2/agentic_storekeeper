@@ -32,12 +32,32 @@ export function RegisterForm() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const detail = data.detail;
-        setError(
-          typeof detail === "string"
-            ? detail
-            : "Could not register — check console / API",
-        );
+        const detail = data.detail as unknown;
+        if (typeof detail === "string") {
+          setError(detail);
+          return;
+        }
+        if (detail && typeof detail === "object") {
+          const parts: string[] = [];
+          for (const [key, val] of Object.entries(
+            detail as Record<string, unknown>,
+          )) {
+            if (Array.isArray(val)) {
+              for (const m of val) {
+                if (typeof m === "string") parts.push(`${key}: ${m}`);
+              }
+            } else if (typeof val === "string") {
+              parts.push(`${key}: ${val}`);
+            }
+          }
+          setError(
+            parts.length > 0
+              ? parts.join(" ")
+              : "Could not register — check your details or API status.",
+          );
+          return;
+        }
+        setError("Could not register — check console / API");
         return;
       }
       void qc.invalidateQueries({ queryKey: ["auth", "me"] });

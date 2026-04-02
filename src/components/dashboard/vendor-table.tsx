@@ -8,12 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatMoney } from "@/lib/format-money";
 import type { FinancialSummary } from "@/schemas/financial";
-
-const currency = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-});
 
 export function VendorTable({ data }: { data: FinancialSummary }) {
   const sorted = [...data.vendorBreakdown].sort((a, b) => b.amount - a.amount);
@@ -24,6 +20,11 @@ export function VendorTable({ data }: { data: FinancialSummary }) {
         <CardTitle className="text-base">Vendor breakdown</CardTitle>
       </CardHeader>
       <CardContent className="px-0 sm:px-6">
+        {sorted.length === 0 ? (
+          <p className="px-6 text-sm text-muted-foreground">
+            No vendor breakdown in this summary.
+          </p>
+        ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -47,12 +48,13 @@ export function VendorTable({ data }: { data: FinancialSummary }) {
                   {row.txCount}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {currency.format(row.amount)}
+                  {formatMoney(row.amount, data.currency)}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        )}
       </CardContent>
     </Card>
   );

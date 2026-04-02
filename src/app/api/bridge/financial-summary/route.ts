@@ -6,7 +6,7 @@ import { mockFinancialSummary } from "@/lib/mock-data";
 
 export async function GET(request: NextRequest) {
   if (useMockDataOnly()) {
-    return NextResponse.json(financialSummarySchema.parse(mockFinancialSummary));
+    return NextResponse.json(mockFinancialSummary);
   }
 
   const url = new URL(API_ROUTES.financialSummary, getApiBaseUrl());

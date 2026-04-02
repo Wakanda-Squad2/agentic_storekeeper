@@ -8,6 +8,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoginForm } from "@/components/auth/login-form";
+import { listDemoAccountsForUi } from "@/lib/auth/credentials";
+import { authUsesMockCredentials } from "@/lib/config";
 
 function LoginFormFallback() {
   return (
@@ -16,6 +18,7 @@ function LoginFormFallback() {
 }
 
 export default function LoginPage() {
+  const showDemoAccounts = authUsesMockCredentials();
   return (
     <div className="space-y-6">
       <Card className="w-full">
@@ -31,6 +34,19 @@ export default function LoginPage() {
           </Suspense>
         </CardContent>
       </Card>
+      {showDemoAccounts ? (
+        <div className="rounded-lg border bg-muted/40 px-4 py-3 text-left text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">Demo accounts (mock auth)</p>
+          <ul className="mt-2 list-inside list-disc space-y-1">
+            {listDemoAccountsForUi().map((row) => (
+              <li key={row.email}>
+                <span className="font-mono text-foreground">{row.email}</span>{" "}
+                — {row.hint}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <p className="text-center text-xs text-muted-foreground">
         By continuing you agree to your organization&apos;s data policies.
       </p>

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { humanizeCategoryLabel } from "@/lib/format-category";
 import type { FinancialSummary } from "@/schemas/financial";
 
 export type DashboardFilterValues = {
@@ -94,7 +95,9 @@ export function DashboardFiltersBar({
                 "w-full justify-between font-normal lg:min-w-[160px]",
               )}
             >
-              {f.category || "All categories"}
+              {f.category
+                ? humanizeCategoryLabel(f.category)
+                : "All categories"}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
               <DropdownMenuItem onClick={() => commit({ category: "" })}>
@@ -102,7 +105,7 @@ export function DashboardFiltersBar({
               </DropdownMenuItem>
               {categories.map((c) => (
                 <DropdownMenuItem key={c} onClick={() => commit({ category: c })}>
-                  {c}
+                  {humanizeCategoryLabel(c)}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>

@@ -56,8 +56,57 @@
   --animate-neo-slide-up: neo-slide-up 0.4s ease-out forwards;
 }
 
-/* Neo-Wakandan Intelligence: brand tokens */
-:root,
+/* Neo-Wakandan Intelligence — light (:root) + dark (.dark on html) */
+:root {
+  --neo-bg: #f4f6fa;
+  --neo-primary: #6c3bff;
+  --neo-accent-gold: #a67c00;
+  --neo-success: #0d9488;
+  --neo-danger: #dc2626;
+  --neo-surface: #ffffff;
+  --neo-surface-2: #eef2f7;
+  --neo-border: rgba(15, 23, 42, 0.1);
+  --neo-text-primary: #0f172a;
+  --neo-text-secondary: #64748b;
+  --gradient-primary: linear-gradient(135deg, #6c3bff, #3b82f6);
+  --gradient-success: linear-gradient(135deg, #0faf8f, #22c55e);
+
+  --background: var(--neo-bg);
+  --foreground: var(--neo-text-primary);
+  --card: rgb(255 255 255 / 0.94);
+  --card-foreground: var(--neo-text-primary);
+  --popover: #ffffff;
+  --popover-foreground: var(--neo-text-primary);
+  --primary: var(--neo-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--neo-surface-2);
+  --secondary-foreground: var(--neo-text-primary);
+  --muted: #e2e8f0;
+  --muted-foreground: var(--neo-text-secondary);
+  --accent: rgb(108 59 255 / 0.1);
+  --accent-foreground: var(--neo-text-primary);
+  --destructive: var(--neo-danger);
+  --border: var(--neo-border);
+  --input: rgba(15, 23, 42, 0.12);
+  --ring: var(--neo-primary);
+  --success: var(--neo-success);
+  --success-foreground: #ffffff;
+  --chart-1: #0faf8f;
+  --chart-2: #6c3bff;
+  --chart-3: #2563eb;
+  --chart-4: #e5484d;
+  --chart-5: #b45309;
+  --radius: 1rem;
+  --sidebar: var(--neo-surface);
+  --sidebar-foreground: var(--neo-text-primary);
+  --sidebar-primary: var(--neo-primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--neo-surface-2);
+  --sidebar-accent-foreground: var(--neo-text-primary);
+  --sidebar-border: var(--neo-border);
+  --sidebar-ring: var(--neo-primary);
+}
+
 .dark {
   --neo-bg: #0b0f14;
   --neo-primary: #6c3bff;
@@ -92,13 +141,11 @@
   --ring: var(--neo-primary);
   --success: var(--neo-success);
   --success-foreground: #ffffff;
-  /* charts: income green, neutral purple/blue, expenses red, KPI gold */
   --chart-1: #0faf8f;
   --chart-2: #6c3bff;
   --chart-3: #3b82f6;
   --chart-4: #e5484d;
   --chart-5: #d4af37;
-  --radius: 1rem;
   --sidebar: var(--neo-surface);
   --sidebar-foreground: var(--neo-text-primary);
   --sidebar-primary: var(--neo-primary);
@@ -148,7 +195,6 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    background-color: var(--neo-bg);
   }
   /* Geometric motif: low contrast only (cultural design rules) */
   body::before {
@@ -157,7 +203,7 @@
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    opacity: 0.035;
+    opacity: 0.03;
     background-image: linear-gradient(
         30deg,
         #6c3bff 9%,
@@ -173,7 +219,10 @@
         #6c3bff 91%
       );
     background-size: 72px 124px;
-    background-color: var(--neo-bg);
+    background-color: var(--background);
+  }
+  .dark body::before {
+    opacity: 0.035;
   }
   h1 {
     @apply text-3xl font-bold tracking-[0.5px] md:text-4xl;

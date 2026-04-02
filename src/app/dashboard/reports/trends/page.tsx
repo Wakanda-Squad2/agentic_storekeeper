@@ -1,8 +1,7 @@
 import { MonthlyTrend } from "@/components/dashboard/monthly-trend";
 import { mockFinancialSummary } from "@/lib/mock-data";
-import { financialSummarySchema } from "@/schemas/financial";
 
-const summary = financialSummarySchema.parse(mockFinancialSummary);
+const summary = mockFinancialSummary;
 
 export default function TrendsReportPage() {
   return (

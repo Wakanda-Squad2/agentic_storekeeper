@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { API_ROUTES, getApiBaseUrl, useMockDataOnly } from "@/lib/config";
+import {
+  API_ROUTES,
+  authUsesMockCredentials,
+  getApiBaseUrl,
+} from "@/lib/config";
 import {
   createRegisteredUserClaims,
 } from "@/lib/auth/credentials";
@@ -29,12 +33,20 @@ export async function POST(request: Request) {
     );
   }
 
-  if (useMockDataOnly()) {
+  if (authUsesMockCredentials()) {
     const claims = createRegisteredUserClaims(
       parsed.data.email,
       parsed.data.name,
     );
-    const token = await signSession(claims);
+    let token: string;
+    try {
+      token = await signSession(claims);
+    } catch {
+      return NextResponse.json(
+        { detail: "Server configuration error (check AUTH_SECRET)." },
+        { status: 500 },
+      );
+    }
     const res = NextResponse.json(
       {
         user: {
@@ -118,7 +130,15 @@ export async function POST(request: Request) {
     onboardingCompleted: u.onboarding_completed === true,
     apiAccessToken: data.access_token,
   };
-  const token = await signSession(claims);
+  let token: string;
+  try {
+    token = await signSession(claims);
+  } catch {
+    return NextResponse.json(
+      { detail: "Server configuration error (check AUTH_SECRET)." },
+      { status: 500 },
+    );
+  }
   const res = NextResponse.json(
     {
       user: {

@@ -14,6 +14,8 @@ import {
 import { TenantSwitcher } from "@/components/layout/tenant-switcher";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { UserMenu } from "@/components/layout/user-menu";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { StorekeeperLogo } from "@/components/brand/storekeeper-brand";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -41,7 +43,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen w-full bg-background">
       <aside className="hidden w-56 shrink-0 border-r border-border bg-surface-2 md:flex md:flex-col">
         <div className="flex h-14 items-center border-b px-4">
-          <Link href="/dashboard" className="font-semibold tracking-tight">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 font-semibold tracking-tight text-foreground"
+          >
+            <StorekeeperLogo className="size-8" />
             Storekeeper
           </Link>
         </div>
@@ -72,9 +78,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border bg-card/80 px-4 backdrop-blur-sm md:px-6">
           <div className="font-medium text-muted-foreground md:hidden">
-            <Link href="/dashboard">Storekeeper</Link>
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 text-foreground"
+            >
+              <StorekeeperLogo className="size-7" />
+              Storekeeper
+            </Link>
           </div>
           <div className="ms-auto flex items-center gap-2">
+            <ThemeToggle />
             <NotificationBell />
             <TenantSwitcher />
             <UserMenu />

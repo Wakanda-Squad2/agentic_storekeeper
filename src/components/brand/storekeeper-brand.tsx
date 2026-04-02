@@ -1,47 +1,27 @@
 "use client";
 
-import { useId } from "react";
+import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 
+/** Raster mark from `public/storekeeper-logo.png` (generated brand asset). */
 export function StorekeeperLogo({ className }: { className?: string }) {
-  const uid = useId().replace(/:/g, "");
-  const gradId = `storekeeper-logo-grad-${uid}`;
-
   return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={cn("shrink-0", className)}
-      aria-hidden
+    <span
+      className={cn(
+        "relative inline-block shrink-0 overflow-hidden rounded-xl",
+        className,
+      )}
     >
-      <defs>
-        <linearGradient
-          id={gradId}
-          x1="4"
-          y1="4"
-          x2="28"
-          y2="28"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#6C3BFF" />
-          <stop offset="1" stopColor="#3B82F6" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M6 10a2 2 0 012-2h16a2 2 0 012 2v12a2 2 0 01-2 2H8a2 2 0 01-2-2V10z"
-        stroke={`url(#${gradId})`}
-        strokeWidth="1.5"
-        strokeLinejoin="round"
+      <Image
+        src="/storekeeper-logo.png"
+        alt=""
+        fill
+        className="object-contain"
+        sizes="112px"
+        priority
       />
-      <path
-        d="M10 14h12M10 18h8"
-        stroke={`url(#${gradId})`}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
+    </span>
   );
 }
 

@@ -35,18 +35,45 @@ export function TenantSwitcher() {
   const active =
     tenants.find((t) => t.id === activeTenantId) ?? tenants[0];
 
+  const label =
+    user?.tenantId === "pending"
+      ? "Complete onboarding"
+      : (active?.name ?? "Organization");
+
+  const showMenu = tenants.length > 1;
+
+  const triggerClass = cn(
+    buttonVariants({ variant: "outline" }),
+    "h-9 gap-2 px-3 font-normal",
+    !showMenu && "pointer-events-none cursor-default",
+  );
+
+  const triggerContent = (
+    <>
+      <Building2 className="size-4 shrink-0 opacity-70" />
+      <span className="truncate">{label}</span>
+      {showMenu ? (
+        <ChevronsUpDown className="ms-auto size-4 shrink-0 opacity-50" />
+      ) : null}
+    </>
+  );
+
+  if (!showMenu) {
+    return (
+      <div
+        className={triggerClass}
+        role="status"
+        aria-label="Current organization"
+      >
+        {triggerContent}
+      </div>
+    );
+  }
+
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        type="button"
-        className={cn(
-          buttonVariants({ variant: "outline" }),
-          "h-9 gap-2 px-3 font-normal",
-        )}
-      >
-        <Building2 className="size-4 shrink-0 opacity-70" />
-        <span className="truncate">{active?.name}</span>
-        <ChevronsUpDown className="ms-auto size-4 shrink-0 opacity-50" />
+      <DropdownMenuTrigger type="button" className={triggerClass}>
+        {triggerContent}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-56">
         {tenants.map((t) => (

@@ -1,8 +1,7 @@
 import { ExpenseDonut } from "@/components/dashboard/expense-donut";
 import { mockFinancialSummary } from "@/lib/mock-data";
-import { financialSummarySchema } from "@/schemas/financial";
 
-const summary = financialSummarySchema.parse(mockFinancialSummary);
+const summary = mockFinancialSummary;
 
 export default function ExpensesReportPage() {
   return (
