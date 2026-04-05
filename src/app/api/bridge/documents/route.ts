@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { API_ROUTES, getApiBaseUrl, useMockDataOnly } from "@/lib/config";
+import { getApiBaseUrl, useMockDataOnly } from "@/lib/config";
 import { bridgeUpstreamHeaders } from "@/lib/api/bridge-headers";
 import {
   documentListResponseSchema,
   documentUploadResponseSchema,
 } from "@/schemas/documents";
 import { mockRecentDocuments } from "@/lib/mock-data";
+import { storekeeperJson } from "@/lib/api/storekeeper/http";
+import type { DocumentList, DocumentResponse } from "@/lib/api/storekeeper/types";
+import {
+  mapDocumentListToRecent,
+  mapDocumentResponseToRecent,
+} from "@/lib/api/storekeeper/bridge-adapters";
+import { ApiError } from "@/lib/api/errors";
+
+function joinUrl(base: string, path: string): string {
+  const b = base.replace(/\/$/, "");
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${b}${p}`;
+}
 
 export async function GET(request: NextRequest) {
   if (useMockDataOnly()) {
@@ -13,46 +26,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   }
 
-  const url = new URL(API_ROUTES.documents, getApiBaseUrl());
   const headers = await bridgeUpstreamHeaders(request);
 
-  let res: Response;
   try {
-    res = await fetch(url, { headers, cache: "no-store" });
-  } catch {
+    const list = await storekeeperJson<DocumentList>(
+      "/api/v1/documents/",
+      { method: "GET" },
+      headers,
+    );
+    const items = mapDocumentListToRecent(list);
+    const data = documentListResponseSchema.parse({ items });
+    return NextResponse.json(data);
+  } catch (e) {
+    if (e instanceof ApiError) {
+      return NextResponse.json(
+        { detail: e.message, code: "upstream_error", body: e.body },
+        { status: e.status >= 400 && e.status < 600 ? e.status : 502 },
+      );
+    }
     return NextResponse.json(
       { detail: "Upstream API unreachable", code: "upstream_down" },
       { status: 503 },
     );
   }
-
-  const text = await res.text();
-  let body: unknown;
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    return NextResponse.json(
-      { detail: "Invalid JSON from upstream" },
-      { status: 502 },
-    );
-  }
-
-  if (!res.ok) {
-    return NextResponse.json(body, { status: res.status });
-  }
-
-  const parsed = documentListResponseSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      {
-        detail: "Document list failed schema validation",
-        issues: parsed.error.flatten(),
-      },
-      { status: 502 },
-    );
-  }
-
-  return NextResponse.json(parsed.data);
 }
 
 export async function POST(request: NextRequest) {
@@ -67,50 +63,54 @@ export async function POST(request: NextRequest) {
   }
 
   const formData = await request.formData();
-  const url = new URL(API_ROUTES.documents, getApiBaseUrl());
+  const files = formData.getAll("files").filter((f): f is File => f instanceof File);
+  if (!files.length) {
+    return NextResponse.json({ detail: "No files in multipart field `files`" }, { status: 400 });
+  }
+
   const headers = await bridgeUpstreamHeaders(request);
+  const base = getApiBaseUrl();
 
-  let res: Response;
+  /** FastAPI accepts one `file` per request; track the first doc for pipeline UI. */
+  let first: DocumentResponse | null = null;
+
   try {
-    res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: formData,
-      cache: "no-store",
-    });
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append("file", file, file.name);
+      const url = joinUrl(base, "/api/v1/documents/");
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: fd,
+        cache: "no-store",
+      });
+      const text = await res.text();
+      let body: unknown;
+      try {
+        body = text ? JSON.parse(text) : null;
+      } catch {
+        return NextResponse.json({ detail: "Invalid JSON from upstream" }, { status: 502 });
+      }
+      if (!res.ok) {
+        return NextResponse.json(body, { status: res.status });
+      }
+      const doc = body as DocumentResponse;
+      if (!first) first = doc;
+    }
   } catch {
-    return NextResponse.json(
-      { detail: "Upstream API unreachable" },
-      { status: 503 },
-    );
+    return NextResponse.json({ detail: "Upstream API unreachable" }, { status: 503 });
   }
 
-  const text = await res.text();
-  let body: unknown;
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    return NextResponse.json(
-      { detail: "Invalid JSON from upstream" },
-      { status: 502 },
-    );
+  if (!first) {
+    return NextResponse.json({ detail: "Upload produced no document" }, { status: 502 });
   }
 
-  if (!res.ok) {
-    return NextResponse.json(body, { status: res.status });
-  }
+  const mapped = mapDocumentResponseToRecent(first);
+  const payload = documentUploadResponseSchema.parse({
+    id: mapped.id,
+    job_id: undefined,
+  });
 
-  const parsed = documentUploadResponseSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      {
-        detail: "Upload response failed schema validation; adjust Zod to match FastAPI",
-        issues: parsed.error.flatten(),
-        raw: body,
-      },
-      { status: 502 },
-    );
-  }
-
-  return NextResponse.json(parsed.data, { status: res.status });
+  return NextResponse.json(payload, { status: 201 });
 }

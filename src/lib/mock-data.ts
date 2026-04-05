@@ -96,6 +96,24 @@ export const mockLedgerTransactions: MockLedgerRow[] = [
     amount: 4200,
     direction: "income",
   },
+  {
+    id: "tx_006",
+    postedAt: "2026-02-18",
+    description: "February client payment",
+    vendor: "Northwind Retail",
+    category: "Sales",
+    amount: 6100,
+    direction: "income",
+  },
+  {
+    id: "tx_007",
+    postedAt: "2026-02-10",
+    description: "Utilities — February",
+    vendor: "City Power Co.",
+    category: "utilities",
+    amount: 890,
+    direction: "expense",
+  },
 ];
 
 export function filterMockLedgerRows(
@@ -121,6 +139,7 @@ export const mockRecentDocuments: RecentDocument[] = [
     type: "receipt",
     status: "reconciled",
     updatedAt: "2026-03-30T14:22:00Z",
+    mimeType: "application/pdf",
   },
   {
     id: "doc_002",
@@ -128,12 +147,14 @@ export const mockRecentDocuments: RecentDocument[] = [
     type: "statement",
     status: "parsed",
     updatedAt: "2026-03-29T09:15:00Z",
+    mimeType: "application/pdf",
   },
   {
     id: "doc_003",
-    name: "Client remittance notice.pdf",
+    name: "Client remittance notice.png",
     type: "invoice",
     status: "uploaded",
     updatedAt: "2026-03-28T19:40:00Z",
+    mimeType: "image/png",
   },
 ];

@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import {
   AgentWorkflowStepper,
   type PipelineStep,
@@ -14,20 +15,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { getDemoParsedPayload } from "@/lib/document-payloads";
-import { mockRecentDocuments } from "@/lib/mock-data";
-import { loadAuditTrail } from "@/lib/api/documents.service";
+import { loadAuditTrail, loadDocumentById } from "@/lib/api/documents.service";
 import { queryKeys } from "@/lib/queries/query-keys";
 import { useNotificationStore } from "@/stores/notification-store";
-
+import { isApiError } from "@/lib/api/errors";
+import {
+  InsightsChat,
+  scrollToInsightsSection,
+} from "@/components/insights/insights-chat";
+import { DocumentPreview } from "./document-preview";
 type Props = { documentId: string };
 
 export function DocumentDetailClient({ documentId }: Props) {
   const qc = useQueryClient();
   const push = useNotificationStore((s) => s.push);
-  const docMeta = useMemo(
-    () => mockRecentDocuments.find((d) => d.id === documentId),
-    [documentId],
-  );
+
+  const docQuery = useQuery({
+    queryKey: queryKeys.documents.detail(documentId),
+    queryFn: () => loadDocumentById(documentId),
+  });
+  const docMeta = docQuery.data;
 
   const initialPayload = useMemo(
     () => getDemoParsedPayload(documentId),
@@ -39,10 +46,10 @@ export function DocumentDetailClient({ documentId }: Props) {
   );
   const [parseError, setParseError] = useState<string | null>(null);
 
-  const auditQuery = useQuery({
-    queryKey: queryKeys.documents.audit(documentId),
-    queryFn: () => loadAuditTrail(documentId),
-  });
+  // const auditQuery = useQuery({
+  //   queryKey: queryKeys.documents.audit(documentId),
+  //   queryFn: () => loadAuditTrail(documentId),
+  // });
 
   const finished =
     docMeta?.status === "reconciled" || docMeta?.status === "categorized";
@@ -146,14 +153,25 @@ export function DocumentDetailClient({ documentId }: Props) {
     }
   }, [jsonText, saveParsed]);
 
-  if (!docMeta) {
+  if (docQuery.isLoading) {
     return (
-      <Alert>
-        <AlertTitle>Unknown document</AlertTitle>
+      <div className="flex items-center gap-2 p-6 text-muted-foreground">
+        <Loader2 className="size-5 animate-spin" />
+        Loading document…
+      </div>
+    );
+  }
+
+  if (docQuery.error || !docMeta) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Could not load document</AlertTitle>
         <AlertDescription>
-          No metadata for this id in the demo list. Wire{" "}
-          <code className="rounded bg-muted px-1">GET /documents/:id</code> and replace
-          <code className="rounded bg-muted px-1"> mockRecentDocuments</code>.
+          {docQuery.error && isApiError(docQuery.error)
+            ? docQuery.error.message
+            : docQuery.error instanceof Error
+              ? docQuery.error.message
+              : "Unknown document or upstream error."}
         </AlertDescription>
       </Alert>
     );
@@ -185,7 +203,13 @@ export function DocumentDetailClient({ documentId }: Props) {
           >
             Re-run agents
           </Button>
-          <Button type="button" variant="secondary" disabled>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() =>
+              scrollToInsightsSection(document.getElementById("document-insights"))
+            }
+          >
             Ask about this document
           </Button>
         </div>
@@ -195,16 +219,18 @@ export function DocumentDetailClient({ documentId }: Props) {
         <Card className="min-h-[420px]">
           <CardHeader>
             <CardTitle className="text-base">Original preview</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Signed URL or pdf.js viewer — data from Filesystem MCP / object
-              storage.
+            <p className="text-muted-foreground text-sm">
+              PDFs and images load through{" "}
+              <code className="rounded bg-muted px-1">/api/bridge/documents/…/file</code> (proxied from
+              FastAPI). Mock mode uses sample assets.
             </p>
           </CardHeader>
           <CardContent>
-            <div className="flex h-[340px] items-center justify-center rounded-lg border-2 border-dashed bg-muted/40 text-center text-sm text-muted-foreground">
-              Preview for{" "}
-              <span className="mx-1 font-medium text-foreground">{docMeta.name}</span>
-            </div>
+            <DocumentPreview
+              documentId={documentId}
+              fileName={docMeta.name}
+              mimeType={docMeta.mimeType}
+            />
           </CardContent>
         </Card>
 
@@ -248,39 +274,11 @@ export function DocumentDetailClient({ documentId }: Props) {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <AgentWorkflowStepper steps={staticSteps} />
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Audit trail</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Who changed what — align entries with DB / event store.
-            </p>
-          </CardHeader>
-          <CardContent>
-            {auditQuery.isLoading ? (
-              <p className="text-sm text-muted-foreground">Loading audit…</p>
-            ) : (
-              <ScrollArea className="h-[240px] rounded-md border">
-                <ul className="space-y-3 p-3 text-sm">
-                  {auditQuery.data?.entries.map((e) => (
-                    <li key={e.id} className="border-b border-border/60 pb-2 last:border-0">
-                      <div className="flex justify-between gap-2 text-xs text-muted-foreground">
-                        <span>{new Date(e.ts).toLocaleString()}</span>
-                        <Badge variant="outline">{e.action}</Badge>
-                      </div>
-                      <p className="font-medium">{e.actor_label}</p>
-                      {e.detail ? (
-                        <p className="text-muted-foreground">{e.detail}</p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </ScrollArea>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <InsightsChat
+        documentId={documentId}
+        documentTitle={docMeta.name}
+        sectionId="document-insights"
+      />
     </div>
   );
 }

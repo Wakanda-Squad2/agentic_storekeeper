@@ -19,6 +19,8 @@ export const recentDocumentSchema = z.object({
   type: z.string(),
   status: documentStatusSchema,
   updatedAt: z.string(),
+  /** MIME type from upstream (e.g. `application/pdf`, `image/jpeg`) for preview routing. */
+  mimeType: z.string().optional(),
 });
 
 export type RecentDocument = z.infer<typeof recentDocumentSchema>;

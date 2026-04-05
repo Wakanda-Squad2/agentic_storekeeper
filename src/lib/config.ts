@@ -50,4 +50,7 @@ export const API_ROUTES = {
     `/api/v1/documents/${documentId}/agents/reparse`,
   documentParsed: (documentId: string) =>
     `/api/v1/documents/${documentId}/parsed`,
+  /** Binary file for preview/download — adjust if your FastAPI route differs (e.g. `/download`). */
+  documentFile: (documentId: string | number) =>
+    `/api/v1/documents/${documentId}/file`,
 } as const;

@@ -29,8 +29,9 @@ export function DocumentsView() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
         <p className="text-muted-foreground">
-          Upload with real progress; pipeline steps stream over SSE through the
-          Next.js bridge.
+          Uploads post to FastAPI via the Next.js bridge (multipart{" "}
+          <code className="rounded bg-muted px-1">file</code> per request). Pipeline SSE still uses
+          bridge routes when enabled.
         </p>
       </div>
 

@@ -3,6 +3,7 @@ import {
   documentListResponseSchema,
   documentUploadResponseSchema,
   auditTrailResponseSchema,
+  recentDocumentSchema,
   type RecentDocument,
 } from "@/schemas/documents";
 import { allowMockFallback, useMockDataOnly } from "@/lib/config";
@@ -41,6 +42,27 @@ export async function uploadDocumentsMetadata(
     method: "POST",
     body,
   });
+}
+
+export async function loadDocumentById(documentId: string): Promise<RecentDocument> {
+  if (useMockDataOnly()) {
+    const found = mockRecentDocuments.find((d) => d.id === documentId);
+    if (!found) {
+      throw new ApiError("Document not found", 404, "not_found");
+    }
+    return recentDocumentSchema.parse(found);
+  }
+  try {
+    return await fetchJsonValidated(`/api/bridge/documents/${documentId}`, {
+      schema: recentDocumentSchema,
+    });
+  } catch (e) {
+    if (allowMockFallback() && e instanceof ApiError) {
+      const found = mockRecentDocuments.find((d) => d.id === documentId);
+      if (found) return recentDocumentSchema.parse(found);
+    }
+    throw e;
+  }
 }
 
 export async function loadAuditTrail(documentId: string) {

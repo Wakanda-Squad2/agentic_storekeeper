@@ -16,14 +16,21 @@ import type { FinancialSummary } from "@/schemas/financial";
 
 export function MonthlyTrend({ data }: { data: FinancialSummary }) {
   const money = (v: number) => formatMoney(v, data.currency);
+  const series = data.monthlyTrend;
   return (
     <Card className="min-h-[320px]">
       <CardHeader>
         <CardTitle className="text-base">Monthly trends</CardTitle>
       </CardHeader>
       <CardContent className="h-[260px] min-h-[200px] min-w-0">
+        {series.length === 0 ? (
+          <div className="text-muted-foreground flex h-full min-h-[200px] items-center justify-center text-center text-sm">
+            No dated transactions across multiple months yet — revenue vs expenses lines need
+            posted dates on your ledger rows.
+          </div>
+        ) : (
         <ResponsiveContainer width="100%" height="100%" minHeight={200}>
-          <LineChart data={data.monthlyTrend} margin={{ left: 8, right: 8 }}>
+          <LineChart data={series} margin={{ left: 8, right: 8 }}>
             <CartesianGrid
               strokeDasharray="3 3"
               stroke="rgba(156,163,175,0.15)"
@@ -32,7 +39,13 @@ export function MonthlyTrend({ data }: { data: FinancialSummary }) {
             <YAxis
               tickLine={false}
               axisLine={false}
-              tickFormatter={(v) => `${Math.round(v / 1000)}k`}
+              tickFormatter={(v) =>
+                typeof v === "number"
+                  ? Math.abs(v) >= 1000
+                    ? `${Math.round(v / 1000)}k`
+                    : String(Math.round(v))
+                  : String(v)
+              }
             />
             <Tooltip
               formatter={(value) =>
@@ -59,6 +72,7 @@ export function MonthlyTrend({ data }: { data: FinancialSummary }) {
             />
           </LineChart>
         </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );
