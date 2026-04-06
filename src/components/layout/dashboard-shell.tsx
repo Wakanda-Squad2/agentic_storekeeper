@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { TenantSwitcher } from "@/components/layout/tenant-switcher";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { ToastStack } from "@/components/ui/toast-stack";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { StorekeeperLogo } from "@/components/brand/storekeeper-brand";
@@ -41,6 +42,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full bg-background">
+      <ToastStack />
       <aside className="hidden w-56 shrink-0 border-r border-border bg-surface-2 md:flex md:flex-col">
         <div className="flex h-14 items-center border-b px-4">
           <Link

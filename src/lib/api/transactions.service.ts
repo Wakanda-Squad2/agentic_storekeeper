@@ -26,10 +26,25 @@ const listResponseSchema = z.object({
 
 export type LedgerTransactionRow = z.infer<typeof ledgerRowSchema>;
 
+/** PATCH body aligned with FastAPI `TransactionUpdate` (OpenAPI). */
+export type TransactionUpdatePayload = {
+  date?: string | null;
+  description?: string | null;
+  amount?: number | string | null;
+  currency?: string | null;
+  type?: "income" | "expense" | null;
+  category?: string | null;
+  vendor?: string | null;
+  reference?: string | null;
+  confidence?: number | null;
+};
+
 export type TransactionsListFilters = {
   category?: string;
   vendor?: string;
 };
+
+const singleItemResponseSchema = z.object({ item: ledgerRowSchema });
 
 export async function loadTransactions(
   filters: TransactionsListFilters = {},
@@ -60,4 +75,80 @@ export async function loadTransactions(
     }
     throw e;
   }
+}
+
+export async function patchTransactionViaBridge(
+  id: string,
+  body: TransactionUpdatePayload,
+): Promise<LedgerTransactionRow> {
+  if (useMockDataOnly()) {
+    throw new ApiError(
+      "Editing transactions requires FastAPI (set NEXT_PUBLIC_USE_MOCK_DATA=false).",
+      400,
+      "mock_mode",
+    );
+  }
+
+  const res = await fetch(`/api/bridge/transactions/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const text = await res.text();
+  let json: unknown = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    throw new ApiError("Response was not valid JSON", res.status, "invalid_json", text);
+  }
+
+  if (!res.ok) {
+    const detail =
+      typeof (json as { detail?: string })?.detail === "string"
+        ? (json as { detail: string }).detail
+        : `Request failed (${res.status})`;
+    throw new ApiError(detail, res.status, undefined, json);
+  }
+
+  const parsed = singleItemResponseSchema.safeParse(json);
+  if (!parsed.success) {
+    throw new ApiError(
+      "Unexpected PATCH response shape",
+      res.status,
+      "schema_validation",
+      json,
+    );
+  }
+  return parsed.data.item;
+}
+
+export async function deleteTransactionViaBridge(id: string): Promise<void> {
+  if (useMockDataOnly()) {
+    throw new ApiError(
+      "Deleting transactions requires FastAPI (set NEXT_PUBLIC_USE_MOCK_DATA=false).",
+      400,
+      "mock_mode",
+    );
+  }
+
+  const res = await fetch(`/api/bridge/transactions/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (res.status === 204 || res.status === 200) {
+    return;
+  }
+
+  const text = await res.text();
+  let detail = `Request failed (${res.status})`;
+  try {
+    const j = JSON.parse(text) as { detail?: string };
+    if (typeof j.detail === "string") detail = j.detail;
+  } catch {
+    /* ignore */
+  }
+  throw new ApiError(detail, res.status, undefined, text);
 }

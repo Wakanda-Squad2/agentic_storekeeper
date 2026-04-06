@@ -1,16 +1,23 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { loadTransactions } from "@/lib/api/transactions.service";
+import { Button } from "@/components/ui/button";
+import {
+  deleteTransactionViaBridge,
+  loadTransactions,
+  type LedgerTransactionRow,
+} from "@/lib/api/transactions.service";
 import { queryKeys } from "@/lib/queries/query-keys";
 import { isApiError } from "@/lib/api/errors";
 import { useMockDataOnly } from "@/lib/config";
+import { TransactionEditModal } from "@/components/transactions/transaction-edit-modal";
+import { useToastStore } from "@/stores/toast-store";
 
 function useCurrencyCode() {
   const mock = useMockDataOnly();
@@ -19,6 +26,9 @@ function useCurrencyCode() {
 
 export function TransactionsView() {
   const mockData = useMockDataOnly();
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState<LedgerTransactionRow | null>(null);
+  const pushErrorToast = useToastStore((s) => s.pushError);
   const searchParams = useSearchParams();
   const category = searchParams.get("category")
     ? decodeURIComponent(searchParams.get("category")!)
@@ -48,6 +58,32 @@ export function TransactionsView() {
   });
 
   const rows = q.data ?? [];
+
+  const delMut = useMutation({
+    mutationFn: deleteTransactionViaBridge,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.transactions.list(filters) });
+    },
+    onError: (e) => {
+      const msg = isApiError(e)
+        ? e.message
+        : e instanceof Error
+          ? e.message
+          : "Delete failed";
+      pushErrorToast("Could not delete transaction", msg);
+    },
+  });
+
+  function onDeleteClick(id: string, label: string) {
+    if (
+      !window.confirm(
+        `Delete this transaction?\n\n${label.slice(0, 120)}${label.length > 120 ? "…" : ""}`,
+      )
+    ) {
+      return;
+    }
+    delMut.mutate(id);
+  }
 
   return (
     <div className="space-y-6">
@@ -118,6 +154,7 @@ export function TransactionsView() {
                 <th className="py-2 pr-4 font-medium">Vendor</th>
                 <th className="py-2 pr-4 font-medium">Category</th>
                 <th className="py-2 pr-4 text-right font-medium">Amount</th>
+                <th className="w-[100px] py-2 pl-2 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -141,6 +178,42 @@ export function TransactionsView() {
                     {r.direction === "income" ? "+" : "−"}
                     {currency.format(r.amount)}
                   </td>
+                  <td className="py-2 pl-2 text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-8"
+                        title={
+                          mockData
+                            ? "Connect FastAPI to edit transactions"
+                            : "Edit transaction"
+                        }
+                        disabled={mockData || delMut.isPending}
+                        onClick={() => setEditing(r)}
+                      >
+                        <Pencil className="size-3.5" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-destructive hover:text-destructive size-8"
+                        title={
+                          mockData
+                            ? "Connect FastAPI to delete transactions"
+                            : "Delete transaction"
+                        }
+                        disabled={mockData || delMut.isPending}
+                        onClick={() => onDeleteClick(r.id, r.description)}
+                      >
+                        <Trash2 className="size-3.5" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -154,6 +227,19 @@ export function TransactionsView() {
       >
         Back to overview
       </Link>
+
+      <TransactionEditModal
+        row={editing}
+        open={editing !== null}
+        onOpenChange={(o) => {
+          if (!o) setEditing(null);
+        }}
+        currencyCode={currencyCode}
+        onSaved={() => {
+          void qc.invalidateQueries({ queryKey: queryKeys.transactions.list(filters) });
+          setEditing(null);
+        }}
+      />
     </div>
   );
 }
