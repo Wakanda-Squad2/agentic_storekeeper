@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { authUsesMockCredentials } from "@/lib/config";
 import { loginWithPassword } from "@/lib/auth/credentials";
 import { attachSessionCookies } from "@/lib/auth/cookies";
 import { signSession } from "@/lib/auth/jwt";
@@ -31,10 +30,10 @@ export async function POST(request: Request) {
     parsed.data.password,
   );
   if (!claims) {
-    const detail = authUsesMockCredentials()
-      ? "Invalid email or password"
-      : "Invalid email or password, or API unreachable. Demo accounts only work when mock auth is on — set STOREKEEPER_AUTH_MOCK=true (or NEXT_PUBLIC_USE_MOCK_DATA=true), restart, and use admin@demo.com / admin123.";
-    return NextResponse.json({ detail }, { status: 401 });
+    return NextResponse.json(
+      { detail: "Invalid email or password" },
+      { status: 401 },
+    );
   }
 
   let token: string;

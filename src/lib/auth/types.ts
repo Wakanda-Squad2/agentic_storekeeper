@@ -9,7 +9,7 @@ export type SessionClaims = {
   tenantId: string;
   onboardingCompleted: boolean;
   organizationName?: string;
-  /** Set after real FastAPI login when integrating — forwarded as Bearer on bridge. */
+  /** Optional upstream Bearer token — forwarded on bridge when present (mock auth has none). */
   apiAccessToken?: string;
 };
 

@@ -53,11 +53,11 @@ export function RegisterForm() {
           setError(
             parts.length > 0
               ? parts.join(" ")
-              : "Could not register — check your details or API status.",
+              : "Could not register — check your details.",
           );
           return;
         }
-        setError("Could not register — check console / API");
+        setError("Could not register — try again.");
         return;
       }
       void qc.invalidateQueries({ queryKey: ["auth", "me"] });

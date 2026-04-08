@@ -1,4 +1,3 @@
-import { authUsesMockCredentials, getApiBaseUrl } from "@/lib/config";
 import type { SessionClaims } from "@/lib/auth/types";
 
 const MOCK_USERS: Record<
@@ -49,65 +48,15 @@ function mockLogin(email: string, password: string): SessionClaims | null {
   return { ...row.claims };
 }
 
-type FastApiAuthResponse = {
-  access_token?: string;
-  user?: {
-    id: string;
-    email: string;
-    name?: string;
-    role?: string;
-    tenant_id: string;
-    onboarding_completed?: boolean;
-    organization_name?: string;
-  };
-};
-
-async function fastApiLogin(
-  email: string,
-  password: string,
-): Promise<SessionClaims | null> {
-  const url = new URL("/api/v1/auth/login", getApiBaseUrl());
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-      cache: "no-store",
-    });
-  } catch {
-    return null;
-  }
-  if (!res.ok) return null;
-  let data: FastApiAuthResponse;
-  try {
-    data = (await res.json()) as FastApiAuthResponse;
-  } catch {
-    return null;
-  }
-  const token = data.access_token;
-  const u = data.user;
-  if (!token || !u?.id || !u.email || !u.tenant_id) return null;
-  return {
-    sub: u.id,
-    email: u.email,
-    name: u.name ?? u.email.split("@")[0] ?? "User",
-    role: u.role === "admin" ? "admin" : "staff",
-    tenantId: u.tenant_id,
-    onboardingCompleted: u.onboarding_completed === true,
-    organizationName: u.organization_name,
-    apiAccessToken: token,
-  };
-}
-
+/**
+ * Validates against built-in demo users. Sessions are signed by this app; there is no upstream
+ * `/auth/login` on the FastAPI service.
+ */
 export async function loginWithPassword(
   email: string,
   password: string,
 ): Promise<SessionClaims | null> {
-  if (authUsesMockCredentials()) {
-    return mockLogin(email, password);
-  }
-  return fastApiLogin(email, password);
+  return mockLogin(email, password);
 }
 
 export function createRegisteredUserClaims(

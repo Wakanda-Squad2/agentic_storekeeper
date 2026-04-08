@@ -16,31 +16,13 @@ export function useMockDataOnly(): boolean {
   return process.env.NEXT_PUBLIC_USE_MOCK_DATA !== "false";
 }
 
-/**
- * Whether `/api/auth/login` and mock registration use built-in demo users (no FastAPI).
- * Uses a server-only env first so `next start` / Docker can turn demo auth on without
- * rebuilding (NEXT_PUBLIC_* is often fixed at build time).
- *
- * - `STOREKEEPER_AUTH_MOCK=true` — force demo credentials on
- * - `STOREKEEPER_AUTH_MOCK=false` — force FastAPI login/register
- * - unset — follow `NEXT_PUBLIC_USE_MOCK_DATA` (not `false` ⇒ mock on)
- */
-export function authUsesMockCredentials(): boolean {
-  const override = process.env.STOREKEEPER_AUTH_MOCK;
-  if (override === "true") return true;
-  if (override === "false") return false;
-  return useMockDataOnly();
-}
-
 /** When true, missing/failing upstream API falls back to mock data (dev convenience). */
 export function allowMockFallback(): boolean {
   return process.env.NEXT_PUBLIC_API_ALLOW_MOCK_FALLBACK === "true";
 }
 
-/** Backend paths — change once to match your FastAPI routes. */
+/** Backend paths — change once to match your FastAPI routes. Auth is app-side only (JWT cookie). */
 export const API_ROUTES = {
-  authLogin: "/api/v1/auth/login",
-  authRegister: "/api/v1/auth/register",
   financialSummary: "/api/v1/financial/summary",
   documents: "/api/v1/documents",
   documentPipelineEvents: (documentId: string) =>
