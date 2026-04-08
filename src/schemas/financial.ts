@@ -98,6 +98,7 @@ export const financialSummarySchema = financialSummaryApiSchema.transform(
 /** Agent insight answer — align with FastAPI response contract. */
 export const insightAnswerSchema = z.object({
   question: z.string(),
+  /** Markdown (headings, lists, **bold**, etc.) — rendered in the insights UI. */
   summary: z.string(),
   figures: z
     .array(

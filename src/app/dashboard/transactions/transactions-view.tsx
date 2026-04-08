@@ -16,13 +16,10 @@ import {
 import { queryKeys } from "@/lib/queries/query-keys";
 import { isApiError } from "@/lib/api/errors";
 import { useMockDataOnly } from "@/lib/config";
+import { ledgerCurrencyFromMockMode } from "@/lib/currency/ledger-currency";
+import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
 import { TransactionEditModal } from "@/components/transactions/transaction-edit-modal";
 import { useToastStore } from "@/stores/toast-store";
-
-function useCurrencyCode() {
-  const mock = useMockDataOnly();
-  return mock ? "USD" : "NGN";
-}
 
 export function TransactionsView() {
   const mockData = useMockDataOnly();
@@ -42,15 +39,8 @@ export function TransactionsView() {
     [category, vendor],
   );
 
-  const currencyCode = useCurrencyCode();
-  const currency = useMemo(
-    () =>
-      new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: currencyCode,
-      }),
-    [currencyCode],
-  );
+  const currencyCode = ledgerCurrencyFromMockMode(mockData);
+  const { format: formatDisplayMoney } = useLedgerDisplayFormat(currencyCode);
 
   const q = useQuery({
     queryKey: queryKeys.transactions.list(filters),
@@ -176,7 +166,7 @@ export function TransactionsView() {
                     }
                   >
                     {r.direction === "income" ? "+" : "−"}
-                    {currency.format(r.amount)}
+                    {formatDisplayMoney(r.amount, { maximumFractionDigits: 2 })}
                   </td>
                   <td className="py-2 pl-2 text-right">
                     <div className="flex justify-end gap-1">

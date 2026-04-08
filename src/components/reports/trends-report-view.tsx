@@ -11,14 +11,15 @@ import { loadTransactions } from "@/lib/api/transactions.service";
 import { queryKeys } from "@/lib/queries/query-keys";
 import { isApiError } from "@/lib/api/errors";
 import { useMockDataOnly } from "@/lib/config";
+import { ledgerCurrencyFromMockMode } from "@/lib/currency/ledger-currency";
 import { buildFinancialSummaryFromLedgerRows } from "@/lib/transactions/build-financial-summary";
-import { formatMoney } from "@/lib/format-money";
+import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
 
 const emptyFilters = {} as const;
 
 export function TrendsReportView() {
   const mockOnly = useMockDataOnly();
-  const currency = mockOnly ? "USD" : "NGN";
+  const ledgerCode = ledgerCurrencyFromMockMode(mockOnly);
 
   const q = useQuery({
     queryKey: queryKeys.transactions.list(emptyFilters),
@@ -26,9 +27,11 @@ export function TrendsReportView() {
   });
 
   const summary = useMemo(
-    () => buildFinancialSummaryFromLedgerRows(q.data ?? [], currency),
-    [q.data, currency],
+    () => buildFinancialSummaryFromLedgerRows(q.data ?? [], ledgerCode),
+    [q.data, ledgerCode],
   );
+
+  const { format: formatMoney } = useLedgerDisplayFormat(summary.currency);
 
   return (
     <div className="space-y-6">
@@ -87,7 +90,7 @@ export function TrendsReportView() {
               </CardHeader>
               <CardContent>
                 <p className="text-success text-xl font-semibold tabular-nums">
-                  {formatMoney(summary.totalRevenue, summary.currency, {
+                  {formatMoney(summary.totalRevenue, {
                     maximumFractionDigits: 0,
                   })}
                 </p>
@@ -101,7 +104,7 @@ export function TrendsReportView() {
               </CardHeader>
               <CardContent>
                 <p className="text-destructive text-xl font-semibold tabular-nums">
-                  {formatMoney(summary.totalExpenses, summary.currency, {
+                  {formatMoney(summary.totalExpenses, {
                     maximumFractionDigits: 0,
                   })}
                 </p>
@@ -121,7 +124,7 @@ export function TrendsReportView() {
                       : "text-destructive text-xl font-semibold tabular-nums"
                   }
                 >
-                  {formatMoney(summary.netProfit, summary.currency, {
+                  {formatMoney(summary.netProfit, {
                     maximumFractionDigits: 0,
                   })}
                 </p>

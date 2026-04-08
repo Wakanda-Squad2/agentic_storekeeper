@@ -102,6 +102,17 @@ export async function deleteDocument(
   });
 }
 
+/** POST /api/v1/documents/{document_id}/reprocess */
+export async function reprocessDocument(
+  documentId: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  await storekeeperJson<unknown>(`${V1}/documents/${documentId}/reprocess`, {
+    method: "POST",
+    signal,
+  });
+}
+
 // --- Transactions ---
 
 export type ListTransactionsParams = {

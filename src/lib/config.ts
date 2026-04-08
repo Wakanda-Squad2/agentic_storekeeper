@@ -9,11 +9,18 @@ export function getApiBaseUrl(): string {
 
 /**
  * Use mock datasets and simulated bridge responses (no FastAPI).
- * Defaults to true when unset so local dev works without a backend.
- * Set `NEXT_PUBLIC_USE_MOCK_DATA=false` when FastAPI is ready.
+ * When unset or empty, defaults to mock so local dev works without a backend.
+ * Set `NEXT_PUBLIC_USE_MOCK_DATA=true` or `false` (case-insensitive). Any other value defaults to mock.
  */
 export function useMockDataOnly(): boolean {
-  return process.env.NEXT_PUBLIC_USE_MOCK_DATA !== "false";
+  const raw = process.env.NEXT_PUBLIC_USE_MOCK_DATA;
+  if (raw === undefined || raw.trim() === "") {
+    return true;
+  }
+  const v = raw.trim().toLowerCase();
+  if (v === "false") return false;
+  if (v === "true") return true;
+  return true;
 }
 
 /** When true, missing/failing upstream API falls back to mock data (dev convenience). */
@@ -21,18 +28,27 @@ export function allowMockFallback(): boolean {
   return process.env.NEXT_PUBLIC_API_ALLOW_MOCK_FALLBACK === "true";
 }
 
-/** Backend paths — change once to match your FastAPI routes. Auth is app-side only (JWT cookie). */
+/**
+ * Backend paths aligned with `https://agentic-storekeeper-backend.onrender.com/openapi.json`
+ * (Swagger: /docs). Routes marked optional below are not in that published spec.
+ */
 export const API_ROUTES = {
   financialSummary: "/api/v1/financial/summary",
   documents: "/api/v1/documents",
+  /**
+   * Optional — not in deployed OpenAPI. Client uses `/api/bridge/.../pipeline/events`;
+   * the bridge proxies this URL or synthesizes `pipeline_completed` if upstream returns 404/405.
+   */
   documentPipelineEvents: (documentId: string) =>
     `/api/v1/documents/${documentId}/pipeline/events`,
-  documentDetail: (documentId: string) => `/api/v1/documents/${documentId}`,
-  documentReparse: (documentId: string) =>
-    `/api/v1/documents/${documentId}/agents/reparse`,
-  documentParsed: (documentId: string) =>
+  documentDetail: (documentId: string | number) => `/api/v1/documents/${documentId}`,
+  /** OpenAPI: POST `/api/v1/documents/{document_id}/reprocess` */
+  documentReprocess: (documentId: string | number) =>
+    `/api/v1/documents/${documentId}/reprocess`,
+  /** Optional — not in published OpenAPI. */
+  documentParsed: (documentId: string | number) =>
     `/api/v1/documents/${documentId}/parsed`,
-  /** Binary file for preview/download — adjust if your FastAPI route differs (e.g. `/download`). */
+  /** Optional — not in published OpenAPI; use `DocumentResponse.file_path` when absent. */
   documentFile: (documentId: string | number) =>
     `/api/v1/documents/${documentId}/file`,
 } as const;

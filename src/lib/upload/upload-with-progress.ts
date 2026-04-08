@@ -9,6 +9,10 @@ export type UploadWithProgressOptions = {
   signal?: AbortSignal;
   /** Network retries after connection failure (not 4xx). */
   retries?: number;
+  /** Applied after `open` (e.g. `x-tenant-id` for FastAPI). */
+  headers?: HeadersInit;
+  /** Default false (cross-origin FastAPI). Use true for same-origin `/api/bridge` with cookies. */
+  withCredentials?: boolean;
 };
 
 function delay(ms: number) {
@@ -52,7 +56,12 @@ function xhrPost(
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);
-    xhr.withCredentials = true;
+    xhr.withCredentials = options.withCredentials ?? false;
+    if (options.headers) {
+      new Headers(options.headers).forEach((v, k) => {
+        xhr.setRequestHeader(k, v);
+      });
+    }
 
     if (options.signal) {
       if (options.signal.aborted) {

@@ -1,6 +1,6 @@
 /**
  * Request/response types aligned with FastAPI OpenAPI 3.1
- * (Agentic Storekeeper API). Regenerate when the backend schema changes.
+ * (see https://agentic-storekeeper-backend.onrender.com/openapi.json).
  */
 
 /** Field-level validation errors from FastAPI (HTTP 422). */
@@ -14,9 +14,11 @@ export type HTTPValidationErrorBody = {
   detail: ValidationErrorItem[];
 };
 
+/** Matches OpenAPI `AskDocumentRequest` — `tenant_id` is optional; tenant often comes from `x-tenant-id` instead. */
 export type AskDocumentRequest = {
   document_id: number;
   question: string;
+  tenant_id?: string | null;
 };
 
 export type ChatRequest = {
@@ -70,6 +72,7 @@ export type TransactionCreate = {
   vendor?: string | null;
   reference?: string | null;
   confidence?: number | null;
+  classification_reasoning?: string | null;
   tenant_id: number;
   document_id?: number | null;
 };
@@ -86,6 +89,7 @@ export type TransactionResponse = {
   vendor?: string | null;
   reference?: string | null;
   confidence?: number | null;
+  classification_reasoning?: string | null;
   document_id?: number | null;
   created_at: string;
 };
@@ -99,6 +103,7 @@ export type TransactionUpdate = {
   category?: string | null;
   vendor?: string | null;
   reference?: string | null;
+  classification_reasoning?: string | null;
   confidence?: number | null;
 };
 

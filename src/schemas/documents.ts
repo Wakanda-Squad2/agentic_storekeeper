@@ -21,6 +21,8 @@ export const recentDocumentSchema = z.object({
   updatedAt: z.string(),
   /** MIME type from upstream (e.g. `application/pdf`, `image/jpeg`) for preview routing. */
   mimeType: z.string().optional(),
+  /** From FastAPI `DocumentResponse.file_path` — used to fetch bytes for preview. */
+  filePath: z.string().optional(),
 });
 
 export type RecentDocument = z.infer<typeof recentDocumentSchema>;

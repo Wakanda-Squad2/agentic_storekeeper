@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   CartesianGrid,
   Legend,
@@ -11,12 +12,20 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatMoney } from "@/lib/format-money";
+import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
 import type { FinancialSummary } from "@/schemas/financial";
 
 export function MonthlyTrend({ data }: { data: FinancialSummary }) {
-  const money = (v: number) => formatMoney(v, data.currency);
-  const series = data.monthlyTrend;
+  const { format: money, convert } = useLedgerDisplayFormat(data.currency);
+  const series = useMemo(
+    () =>
+      data.monthlyTrend.map((row) => ({
+        ...row,
+        revenue: convert(row.revenue),
+        expenses: convert(row.expenses),
+      })),
+    [data.monthlyTrend, convert],
+  );
   return (
     <Card className="min-h-[320px]">
       <CardHeader>

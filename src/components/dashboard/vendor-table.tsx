@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -8,10 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatMoney } from "@/lib/format-money";
+import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
 import type { FinancialSummary } from "@/schemas/financial";
 
 export function VendorTable({ data }: { data: FinancialSummary }) {
+  const { format: formatMoney } = useLedgerDisplayFormat(data.currency);
   const sorted = [...data.vendorBreakdown].sort((a, b) => b.amount - a.amount);
 
   return (
@@ -48,7 +51,7 @@ export function VendorTable({ data }: { data: FinancialSummary }) {
                   {row.txCount}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {formatMoney(row.amount, data.currency)}
+                  {formatMoney(row.amount)}
                 </TableCell>
               </TableRow>
             ))}

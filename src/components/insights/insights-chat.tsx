@@ -7,8 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { insightAnswerSchema, type InsightAnswer } from "@/schemas/financial";
+import { InsightSummaryMarkdown } from "@/components/insights/insight-summary-markdown";
 import { z } from "zod";
 import { useMockDataOnly } from "@/lib/config";
+import { storekeeperJson } from "@/lib/api/storekeeper/http";
+import type { ChatResponse } from "@/lib/api/storekeeper/types";
+import { browserUpstreamHeaders } from "@/lib/api/browser-upstream";
+import { ApiError } from "@/lib/api/errors";
+import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
 
 const questionSchema = z.object({
   question: z.string().min(4, "Ask a fuller question"),
@@ -122,6 +128,21 @@ function parseNumericDocumentId(documentId: string | undefined): number | null {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
 }
 
+function InsightFigureAmount({
+  value,
+  currency,
+}: {
+  value: number;
+  currency: string;
+}) {
+  const { format } = useLedgerDisplayFormat(currency);
+  return (
+    <span className="font-medium">
+      {format(value, { maximumFractionDigits: 2 })}
+    </span>
+  );
+}
+
 export function InsightsChat({
   documentId,
   documentTitle,
@@ -170,24 +191,25 @@ export function InsightsChat({
             "This document id is not a numeric FastAPI id. Open a document from the API-backed list, or ask from Insights without a document scope.",
           );
         }
-        const res = await fetch("/api/bridge/chat/ask-document", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            document_id: numericDocId,
-            question: parsed.data.question,
-          }),
-        });
-        const json: unknown = await res.json().catch(() => null);
-        if (!res.ok) {
-          const detail =
-            typeof (json as { detail?: string })?.detail === "string"
-              ? (json as { detail: string }).detail
-              : `Request failed (${res.status})`;
-          throw new Error(detail);
+        let body: Record<string, unknown>;
+        try {
+          body = await storekeeperJson<Record<string, unknown>>(
+            "/api/v1/chat/ask-about-document",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              // OpenAPI: required `document_id`, `question`; optional `tenant_id`. Tenant is sent via `x-tenant-id` (see browserUpstreamHeaders).
+              body: JSON.stringify({
+                document_id: numericDocId,
+                question: parsed.data.question,
+              }),
+            },
+            browserUpstreamHeaders(),
+          );
+        } catch (e) {
+          if (e instanceof ApiError) throw new Error(e.message);
+          throw e;
         }
-        const body = json as Record<string, unknown>;
         const summary = summaryFromAskDocumentBody(body);
         setAnswer(
           insightAnswerSchema.parse({
@@ -197,21 +219,23 @@ export function InsightsChat({
           }),
         );
       } else {
-        const res = await fetch("/api/bridge/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ message: parsed.data.question }),
-        });
-        const json: unknown = await res.json().catch(() => null);
-        if (!res.ok) {
-          const detail =
-            typeof (json as { detail?: string })?.detail === "string"
-              ? (json as { detail: string }).detail
-              : `Request failed (${res.status})`;
-          throw new Error(detail);
+        let body: ChatResponse;
+        try {
+          body = await storekeeperJson<ChatResponse>(
+            "/api/v1/chat/",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                message: parsed.data.question,
+              }),
+            },
+            browserUpstreamHeaders(),
+          );
+        } catch (e) {
+          if (e instanceof ApiError) throw new Error(e.message);
+          throw e;
         }
-        const body = json as { answer?: string; data?: Record<string, unknown> };
         const summary = typeof body.answer === "string" ? body.answer : "";
         setAnswer(
           insightAnswerSchema.parse({
@@ -273,7 +297,7 @@ export function InsightsChat({
               </div>
               <Button type="submit" disabled={loading}>
                 {loading && <Loader2 className="me-2 size-4 animate-spin" />}
-                {mockOnly ? "Run demo answer" : documentScoped ? "Ask about upload" : "Ask (FastAPI)"}
+                {mockOnly ? "Run demo answer" : documentScoped ? "Ask about upload" : "Get Insights"}
               </Button>
             </form>
             <p className="text-muted-foreground mt-4 text-xs">
@@ -285,14 +309,14 @@ export function InsightsChat({
                 </>
               ) : documentScoped ? (
                 <>
-                  Upload-scoped questions use the bridge{" "}
-                  <code className="rounded bg-muted px-1">/api/bridge/chat/ask-document</code> →
-                  FastAPI ask-about-document.
+                  Upload-scoped questions call{" "}
+                  <code className="rounded bg-muted px-1">POST /api/v1/chat/ask-about-document</code> on
+                  your API origin.
                 </>
               ) : (
                 <>
-                  General questions use{" "}
-                  <code className="rounded bg-muted px-1">/api/bridge/chat</code>; figures render when
+                  General questions call{" "}
+                  <code className="rounded bg-muted px-1">POST /api/v1/chat/</code>; figures render when
                   the model returns a <code className="rounded bg-muted px-1">figures</code> array in{" "}
                   <code className="rounded bg-muted px-1">data</code>.
                 </>
@@ -314,7 +338,9 @@ export function InsightsChat({
               <div className="space-y-4">
                 <div>
                   <p className="text-muted-foreground text-xs font-medium uppercase">Summary</p>
-                  <p className="mt-1 text-sm whitespace-pre-wrap">{answer.summary}</p>
+                  <div className="mt-1">
+                    <InsightSummaryMarkdown>{answer.summary}</InsightSummaryMarkdown>
+                  </div>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs font-medium uppercase">Figures</p>
@@ -325,12 +351,7 @@ export function InsightsChat({
                         className="flex justify-between gap-4 text-sm tabular-nums"
                       >
                         <span>{f.label}</span>
-                        <span className="font-medium">
-                          {new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: f.currency,
-                          }).format(f.value)}
-                        </span>
+                        <InsightFigureAmount value={f.value} currency={f.currency} />
                       </li>
                     ))}
                   </ul>

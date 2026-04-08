@@ -8,6 +8,7 @@ import { z } from "zod";
 const bodySchema = z.object({
   document_id: z.number().int().positive(),
   question: z.string().min(1),
+  tenant_id: z.string().nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -44,6 +45,9 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           document_id: parsed.data.document_id,
           question: parsed.data.question,
+          ...(parsed.data.tenant_id != null && parsed.data.tenant_id !== ""
+            ? { tenant_id: parsed.data.tenant_id }
+            : {}),
         }),
       },
       headers,

@@ -1,15 +1,19 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { FileUp, Loader2, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { AgentWorkflowStepper } from "./agent-workflow-stepper";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { z } from "zod";
 import { documentUploadResponseSchema } from "@/schemas/documents";
 import { uploadFormWithProgress } from "@/lib/upload/upload-with-progress";
+import { useMockDataOnly } from "@/lib/config";
+import { apiAbsoluteUrl, browserUpstreamHeaders } from "@/lib/api/browser-upstream";
+import { mapDocumentResponseToRecent } from "@/lib/api/storekeeper/bridge-adapters";
+import type { DocumentResponse } from "@/lib/api/storekeeper/types";
 import {
   useAgentPipelineStream,
   createInitialPipelineSteps,
@@ -23,11 +27,65 @@ const ACCEPT = {
   "application/pdf": [],
 };
 
+const UPLOAD_STATUS_LINES = [
+  "Preparing files…",
+  "Sending to the server…",
+  "Waiting for the API to finish…",
+] as const;
+
+function UploadIndeterminateActivity({ active }: { active: boolean }) {
+  const [lineIndex, setLineIndex] = useState(0);
+
+  useEffect(() => {
+    if (!active) {
+      setLineIndex(0);
+      return;
+    }
+    const tick = window.setInterval(() => {
+      setLineIndex((i) => (i + 1) % UPLOAD_STATUS_LINES.length);
+    }, 2000);
+    return () => window.clearInterval(tick);
+  }, [active]);
+
+  if (!active) return null;
+
+  return (
+    <div
+      className="space-y-3 rounded-lg border border-border/80 bg-muted/30 px-4 py-3"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+        <span className="relative flex size-2">
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/40 opacity-60" />
+          <span className="relative inline-flex size-2 rounded-full bg-primary" />
+        </span>
+        <span className="transition-opacity duration-300">
+          {UPLOAD_STATUS_LINES[lineIndex]}
+        </span>
+      </div>
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        The browser cannot measure exact upload progress for this API. This bar shows activity
+        until the response returns.
+      </p>
+      <div
+        className="relative h-2 w-full overflow-hidden rounded-full bg-muted shadow-inner"
+        aria-hidden
+      >
+        <div
+          className="h-full w-[36%] rounded-full bg-gradient-to-r from-primary/25 via-primary to-primary/25 shadow-[0_0_14px_rgba(108,59,255,0.35)] will-change-transform animate-upload-sweep"
+        />
+      </div>
+    </div>
+  );
+}
+
 export function UploadZone() {
+  const mockData = useMockDataOnly();
   const qc = useQueryClient();
   const pushAlert = useNotificationStore((s) => s.push);
   const [files, setFiles] = useState<File[]>([]);
-  const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -40,7 +98,6 @@ export function UploadZone() {
     (accepted: File[]) => {
       setFiles(accepted);
       setUploadError(null);
-      setUploadPct(null);
       setActiveDocId(null);
       pipeline.reset();
     },
@@ -58,46 +115,87 @@ export function UploadZone() {
     if (!files.length) return;
     setBusy(true);
     setUploadError(null);
-    setUploadPct(0);
     setActiveDocId(null);
     pipeline.reset();
 
-    const formData = new FormData();
-    for (const f of files) formData.append("files", f, f.name);
-
     try {
-      const { status, bodyText } = await uploadFormWithProgress(
-        "/api/bridge/documents",
-        formData,
-        {
-          retries: 2,
-          onProgress: (p) => setUploadPct(p.percent),
-        },
-      );
+      let parsed: z.infer<typeof documentUploadResponseSchema>;
 
-      let json: unknown;
-      try {
-        json = bodyText ? JSON.parse(bodyText) : null;
-      } catch {
-        throw new Error("Upload response was not JSON");
-      }
-
-      if (![200, 201].includes(status)) {
-        const detail =
-          typeof (json as { detail?: string })?.detail === "string"
-            ? (json as { detail: string }).detail
-            : `Upload failed (${status})`;
-        throw new Error(detail);
-      }
-
-      const parsed = documentUploadResponseSchema.safeParse(json);
-      if (!parsed.success) {
-        throw new Error(
-          "Upload response failed validation — update `documentUploadResponseSchema` to match FastAPI.",
+      if (mockData) {
+        const formData = new FormData();
+        for (const f of files) formData.append("files", f, f.name);
+        const { status, bodyText } = await uploadFormWithProgress(
+          "/api/bridge/documents",
+          formData,
+          {
+            retries: 2,
+            withCredentials: true,
+          },
         );
+        let json: unknown;
+        try {
+          json = bodyText ? JSON.parse(bodyText) : null;
+        } catch {
+          throw new Error("Upload response was not JSON");
+        }
+        if (![200, 201].includes(status)) {
+          const detail =
+            typeof (json as { detail?: string })?.detail === "string"
+              ? (json as { detail: string }).detail
+              : `Upload failed (${status})`;
+          throw new Error(detail);
+        }
+        const pr = documentUploadResponseSchema.safeParse(json);
+        if (!pr.success) {
+          throw new Error(
+            "Upload response failed validation — update `documentUploadResponseSchema` to match FastAPI.",
+          );
+        }
+        parsed = pr.data;
+      } else {
+        const headers = browserUpstreamHeaders();
+        let first: DocumentResponse | null = null;
+        for (const f of files) {
+          const fd = new FormData();
+          fd.append("file", f, f.name);
+          const { status, bodyText } = await uploadFormWithProgress(
+            apiAbsoluteUrl("/api/v1/documents/"),
+            fd,
+            {
+              retries: 2,
+              headers,
+            },
+          );
+          let json: unknown;
+          try {
+            json = bodyText ? JSON.parse(bodyText) : null;
+          } catch {
+            throw new Error("Upload response was not JSON");
+          }
+          if (![200, 201].includes(status)) {
+            const detail =
+              typeof (json as { detail?: string })?.detail === "string"
+                ? (json as { detail: string }).detail
+                : `Upload failed (${status})`;
+            throw new Error(detail);
+          }
+          const doc = json as DocumentResponse;
+          if (!first) first = doc;
+        }
+        const mapped = mapDocumentResponseToRecent(first!);
+        const pr = documentUploadResponseSchema.safeParse({
+          id: mapped.id,
+          job_id: undefined,
+        });
+        if (!pr.success) {
+          throw new Error(
+            "Upload response failed validation — update `documentUploadResponseSchema` to match FastAPI.",
+          );
+        }
+        parsed = pr.data;
       }
 
-      setActiveDocId(parsed.data.id);
+      setActiveDocId(parsed.id);
       void qc.invalidateQueries({ queryKey: queryKeys.documents.list });
       pushAlert({
         kind: "success",
@@ -110,7 +208,6 @@ export function UploadZone() {
       pushAlert({ kind: "error", title: "Upload failed", message: msg });
     } finally {
       setBusy(false);
-      setUploadPct(null);
     }
   }
 
@@ -181,7 +278,7 @@ export function UploadZone() {
             disabled={!files.length || busy}
           >
             {busy && <Loader2 className="me-2 size-4 animate-spin" />}
-            Upload with progress
+            Upload
           </Button>
           <Button
             type="button"
@@ -198,15 +295,7 @@ export function UploadZone() {
           </Button>
         </div>
 
-        {uploadPct !== null ? (
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Multipart upload</span>
-              <span>{uploadPct}%</span>
-            </div>
-            <Progress value={uploadPct} />
-          </div>
-        ) : null}
+        <UploadIndeterminateActivity active={busy} />
 
         {activeDocId ? (
           <p className="text-xs text-muted-foreground">

@@ -4,21 +4,8 @@ import { bridgeUpstreamHeaders } from "@/lib/api/bridge-headers";
 import { storekeeperJson, toSearchParams } from "@/lib/api/storekeeper/http";
 import type { TransactionResponse } from "@/lib/api/storekeeper/types";
 import { ApiError } from "@/lib/api/errors";
-import { mockLedgerTransactions, type MockLedgerRow } from "@/lib/mock-data";
-
-function mapTransaction(t: TransactionResponse): MockLedgerRow {
-  const amount = Math.abs(Number(t.amount));
-  const direction = t.type?.toLowerCase() === "income" ? "income" : "expense";
-  return {
-    id: String(t.id),
-    postedAt: t.date,
-    description: t.description,
-    vendor: t.vendor?.trim() || "—",
-    category: t.category?.trim() || "—",
-    amount,
-    direction,
-  };
-}
+import { mockLedgerTransactions } from "@/lib/mock-data";
+import { mapTransactionToLedgerRow } from "@/lib/api/map-transaction";
 
 export async function GET(request: NextRequest) {
   if (useMockDataOnly()) {
@@ -47,7 +34,7 @@ export async function GET(request: NextRequest) {
       { method: "GET" },
       headers,
     );
-    const items = raw.map(mapTransaction);
+    const items = raw.map(mapTransactionToLedgerRow);
     return NextResponse.json({ items });
   } catch (e) {
     if (e instanceof ApiError) {

@@ -8,7 +8,7 @@ Drift between `src/schemas/*.ts` (Zod) and Pydantic models is the main source of
 2. Run codegen whenever the API changes:
 
    ```bash
-   npx openapi-typescript http://localhost:8000/openapi.json -o src/schemas/generated/openapi.d.ts
+   npx openapi-typescript https://agentic-storekeeper-backend.onrender.com/openapi.json -o src/schemas/generated/openapi.d.ts
    ```
 
 3. Wrap critical endpoints with thin Zod validators that match the same shapes (or use tools that emit Zod from OpenAPI).

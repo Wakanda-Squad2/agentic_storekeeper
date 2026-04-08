@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Cell,
   Legend,
@@ -17,7 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { humanizeCategoryLabel } from "@/lib/format-category";
-import { formatMoney } from "@/lib/format-money";
+import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
 import type { FinancialSummary } from "@/schemas/financial";
 
 const COLORS = [
@@ -30,11 +31,16 @@ const COLORS = [
 ];
 
 export function ExpenseDonut({ data }: { data: FinancialSummary }) {
-  const chartData = data.expenseByCategory.map((row) => ({
-    name: humanizeCategoryLabel(row.category),
-    categoryKey: row.category,
-    value: row.amount,
-  }));
+  const { format: formatMoney, convert } = useLedgerDisplayFormat(data.currency);
+  const chartData = useMemo(
+    () =>
+      data.expenseByCategory.map((row) => ({
+        name: humanizeCategoryLabel(row.category),
+        categoryKey: row.category,
+        value: convert(row.amount),
+      })),
+    [data.expenseByCategory, convert],
+  );
 
   return (
     <Card className="min-h-[320px]">
@@ -65,7 +71,7 @@ export function ExpenseDonut({ data }: { data: FinancialSummary }) {
             <Tooltip
               formatter={(value) =>
                 typeof value === "number"
-                  ? formatMoney(value, data.currency, {
+                  ? formatMoney(value, {
                       maximumFractionDigits: 2,
                     })
                   : String(value ?? "")

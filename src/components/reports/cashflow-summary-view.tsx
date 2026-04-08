@@ -28,14 +28,15 @@ import { loadTransactions } from "@/lib/api/transactions.service";
 import { queryKeys } from "@/lib/queries/query-keys";
 import { isApiError } from "@/lib/api/errors";
 import { useMockDataOnly } from "@/lib/config";
+import { ledgerCurrencyFromMockMode } from "@/lib/currency/ledger-currency";
 import { buildCashflowFromTransactions } from "@/lib/cashflow/from-transactions";
-import { formatMoney } from "@/lib/format-money";
+import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
 
 const emptyFilters = {} as const;
 
 export function CashflowSummaryView() {
   const mockOnly = useMockDataOnly();
-  const currency = mockOnly ? "USD" : "NGN";
+  const ledgerCode = ledgerCurrencyFromMockMode(mockOnly);
 
   const q = useQuery({
     queryKey: queryKeys.transactions.list(emptyFilters),
@@ -43,21 +44,21 @@ export function CashflowSummaryView() {
   });
 
   const summary = useMemo(
-    () => buildCashflowFromTransactions(q.data ?? [], currency),
-    [q.data, currency],
+    () => buildCashflowFromTransactions(q.data ?? [], ledgerCode),
+    [q.data, ledgerCode],
   );
 
-  const fmt = (n: number) => formatMoney(n, summary.currency);
+  const { format: fmt, convert } = useLedgerDisplayFormat(summary.currency);
 
   const chartData = useMemo(
     () =>
       summary.periods.map((p) => ({
         label: p.label,
-        inflows: p.inflows,
-        outflows: p.outflows,
-        net: p.net,
+        inflows: convert(p.inflows),
+        outflows: convert(p.outflows),
+        net: convert(p.net),
       })),
-    [summary.periods],
+    [summary.periods, convert],
   );
 
   return (

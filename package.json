@@ -22,6 +22,7 @@
     "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
     "react-dropzone": "^15.0.0",
     "react-hook-form": "^7.72.0",
     "recharts": "^3.8.1",
@@ -32,7 +33,6 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@tailwindcss/oxide-darwin-arm64": "^4.2.2",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

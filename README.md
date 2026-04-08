@@ -90,7 +90,7 @@ Browser calls **same-origin** routes under `/api/bridge/*`. Each handler forward
 | `GET /api/bridge/documents/[id]/pipeline/events` | SSE proxy (or mock stream) |
 | `GET /api/bridge/documents/[id]/audit` | Audit trail |
 | `PATCH /api/bridge/documents/[id]/parsed` | Human edits to parsed JSON |
-| `POST /api/bridge/documents/[id]/agents/reparse` | Re-run agents |
+| `POST /api/bridge/documents/[id]/reprocess` | Proxies `POST /api/v1/documents/{id}/reprocess` |
 
 Agent pipeline events must match `src/schemas/agent-events.ts` (`agentPipelineEventSchema`, version `v: 1`). WebSockets can use the same payload shapes behind a small adapter.
 

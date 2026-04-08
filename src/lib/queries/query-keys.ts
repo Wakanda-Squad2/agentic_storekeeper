@@ -12,4 +12,9 @@ export const queryKeys = {
     list: (filters: Record<string, string | undefined>) =>
       ["transactions", "list", filters] as const,
   },
+  fx: {
+    rate: (base: string, quote: string) =>
+      ["fx", "rate", base.toUpperCase(), quote.toUpperCase()] as const,
+    currencies: ["fx", "currencies"] as const,
+  },
 } as const;

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import {
   agentPipelineMessageSchema,
   unwrapAgentEvent,
@@ -92,9 +99,43 @@ type StreamState = {
   connection: "idle" | "open" | "closed" | "error";
 };
 
+function handleSseDataLine(
+  data: string,
+  setState: Dispatch<SetStateAction<StreamState>>,
+) {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(data);
+  } catch {
+    setState((prev) => ({
+      ...prev,
+      parseErrors: [...prev.parseErrors, "Non-JSON SSE payload"],
+    }));
+    return;
+  }
+
+  const parsed = agentPipelineMessageSchema.safeParse(raw);
+  if (!parsed.success) {
+    setState((prev) => ({
+      ...prev,
+      parseErrors: [
+        ...prev.parseErrors,
+        `Invalid event: ${parsed.error.message}`,
+      ],
+    }));
+    return;
+  }
+
+  const event = unwrapAgentEvent(parsed.data);
+  setState((prev) => ({
+    ...prev,
+    steps: applyEvent(prev.steps, event),
+  }));
+}
+
 /**
- * Subscribes to same-origin SSE (`/api/bridge/documents/:id/pipeline/events`).
- * Event payloads validated with `agentPipelineMessageSchema` before applying.
+ * Subscribes to same-origin SSE `/api/bridge/documents/:id/pipeline/events`.
+ * The bridge proxies the upstream stream when it exists, or returns a stub when the API has no pipeline route (e.g. 404).
  */
 export function useAgentPipelineStream(
   documentId: string | null,
@@ -130,34 +171,7 @@ export function useAgentPipelineStream(
     const es = new EventSource(url);
 
     es.onmessage = (ev) => {
-      let raw: unknown;
-      try {
-        raw = JSON.parse(ev.data);
-      } catch {
-        setState((prev) => ({
-          ...prev,
-          parseErrors: [...prev.parseErrors, "Non-JSON SSE payload"],
-        }));
-        return;
-      }
-
-      const parsed = agentPipelineMessageSchema.safeParse(raw);
-      if (!parsed.success) {
-        setState((prev) => ({
-          ...prev,
-          parseErrors: [
-            ...prev.parseErrors,
-            `Invalid event: ${parsed.error.message}`,
-          ],
-        }));
-        return;
-      }
-
-      const event = unwrapAgentEvent(parsed.data);
-      setState((prev) => ({
-        ...prev,
-        steps: applyEvent(prev.steps, event),
-      }));
+      handleSseDataLine(ev.data, setState);
     };
 
     es.onerror = () => {

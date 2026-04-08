@@ -41,6 +41,7 @@ export function mapDocumentResponseToRecent(d: DocumentResponse): RecentDocument
     status: mapDocumentStatus(d.status),
     updatedAt: d.updated_at ?? d.created_at,
     mimeType: d.file_type?.trim() || undefined,
+    filePath: d.file_path?.trim() || undefined,
   };
 }
 

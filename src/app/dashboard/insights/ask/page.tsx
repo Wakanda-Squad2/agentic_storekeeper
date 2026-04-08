@@ -16,11 +16,8 @@ export default function InsightsAskPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
-        <p className="text-muted-foreground">
-          Natural-language questions about your ledger or a{" "}
-          <span className="text-foreground">specific upload</span> (pass{" "}
-          <code className="rounded bg-muted px-1">?documentId=123</code> and optional{" "}
-          <code className="rounded bg-muted px-1">documentTitle</code> in the URL).
+        <p className="text-muted-foreground max-w-2xl text-pretty">
+          Get insights about your finances
         </p>
       </div>
       <Suspense fallback={<Fallback />}>

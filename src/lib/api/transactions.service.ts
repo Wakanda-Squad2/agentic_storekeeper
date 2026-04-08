@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { fetchJsonValidated } from "@/lib/api/client";
 import {
   allowMockFallback,
   useMockDataOnly,
@@ -9,6 +8,10 @@ import {
   mockLedgerTransactions,
 } from "@/lib/mock-data";
 import { ApiError } from "@/lib/api/errors";
+import { storekeeperJson, toSearchParams } from "@/lib/api/storekeeper/http";
+import type { TransactionResponse } from "@/lib/api/storekeeper/types";
+import { mapTransactionToLedgerRow } from "@/lib/api/map-transaction";
+import { browserUpstreamHeaders } from "@/lib/api/browser-upstream";
 
 const ledgerRowSchema = z.object({
   id: z.string(),
@@ -36,6 +39,7 @@ export type TransactionUpdatePayload = {
   category?: string | null;
   vendor?: string | null;
   reference?: string | null;
+  classification_reasoning?: string | null;
   confidence?: number | null;
 };
 
@@ -56,16 +60,21 @@ export async function loadTransactions(
     });
   }
 
-  const p = new URLSearchParams();
-  if (filters.category?.trim()) p.set("category", filters.category.trim());
-  if (filters.vendor?.trim()) p.set("vendor", filters.vendor.trim());
-  const qs = p.toString();
+  const q = toSearchParams({
+    page: 1,
+    size: 100,
+    category: filters.category?.trim() || undefined,
+    vendor: filters.vendor?.trim() || undefined,
+  });
 
   try {
-    const data = await fetchJsonValidated(`/api/bridge/transactions${qs ? `?${qs}` : ""}`, {
-      schema: listResponseSchema,
-    });
-    return data.items;
+    const raw = await storekeeperJson<TransactionResponse[]>(
+      `/api/v1/transactions/${q}`,
+      { method: "GET" },
+      browserUpstreamHeaders(),
+    );
+    const items = raw.map(mapTransactionToLedgerRow);
+    return listResponseSchema.parse({ items }).items;
   } catch (e) {
     if (allowMockFallback() && e instanceof ApiError) {
       return filterMockLedgerRows(mockLedgerTransactions, {
@@ -89,39 +98,28 @@ export async function patchTransactionViaBridge(
     );
   }
 
-  const res = await fetch(`/api/bridge/transactions/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const text = await res.text();
-  let json: unknown = null;
-  try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    throw new ApiError("Response was not valid JSON", res.status, "invalid_json", text);
+  const numericId = Number(id);
+  if (!Number.isFinite(numericId)) {
+    throw new ApiError("Invalid transaction id", 400, "invalid_id");
   }
 
-  if (!res.ok) {
-    const detail =
-      typeof (json as { detail?: string })?.detail === "string"
-        ? (json as { detail: string }).detail
-        : `Request failed (${res.status})`;
-    throw new ApiError(detail, res.status, undefined, json);
+  const payload = Object.fromEntries(
+    Object.entries(body).filter(([, v]) => v !== undefined),
+  );
+  if (Object.keys(payload).length === 0) {
+    throw new ApiError("No fields to update", 400, "empty_patch");
   }
 
-  const parsed = singleItemResponseSchema.safeParse(json);
-  if (!parsed.success) {
-    throw new ApiError(
-      "Unexpected PATCH response shape",
-      res.status,
-      "schema_validation",
-      json,
-    );
-  }
-  return parsed.data.item;
+  const updated = await storekeeperJson<TransactionResponse>(
+    `/api/v1/transactions/${numericId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    browserUpstreamHeaders(),
+  );
+  return singleItemResponseSchema.parse({ item: mapTransactionToLedgerRow(updated) }).item;
 }
 
 export async function deleteTransactionViaBridge(id: string): Promise<void> {
@@ -133,22 +131,14 @@ export async function deleteTransactionViaBridge(id: string): Promise<void> {
     );
   }
 
-  const res = await fetch(`/api/bridge/transactions/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-
-  if (res.status === 204 || res.status === 200) {
-    return;
+  const numericId = Number(id);
+  if (!Number.isFinite(numericId)) {
+    throw new ApiError("Invalid transaction id", 400, "invalid_id");
   }
 
-  const text = await res.text();
-  let detail = `Request failed (${res.status})`;
-  try {
-    const j = JSON.parse(text) as { detail?: string };
-    if (typeof j.detail === "string") detail = j.detail;
-  } catch {
-    /* ignore */
-  }
-  throw new ApiError(detail, res.status, undefined, text);
+  await storekeeperJson<unknown>(
+    `/api/v1/transactions/${numericId}`,
+    { method: "DELETE" },
+    browserUpstreamHeaders(),
+  );
 }

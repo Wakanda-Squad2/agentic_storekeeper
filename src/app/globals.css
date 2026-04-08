@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
+/* Direct file — `@import "shadcn/tailwind.css"` fails here because the package exposes that subpath only under the `style` export condition, which Tailwind/PostCSS does not apply. */
+@import "../../node_modules/shadcn/dist/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -54,6 +55,7 @@
   --animate-neo-pulse: neo-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-neo-fade-in: neo-fade-in 0.45s ease-out forwards;
   --animate-neo-slide-up: neo-slide-up 0.4s ease-out forwards;
+  --animate-upload-sweep: upload-sweep 1.35s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 /* Neo-Wakandan Intelligence — light (:root) + dark (.dark on html) */
@@ -183,6 +185,16 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/** Indeterminate upload bar — sweep across track (no reliable server-side %). */
+@keyframes upload-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(380%);
   }
 }
 

@@ -1,9 +1,11 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatMoney } from "@/lib/format-money";
+import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
 import type { FinancialSummary } from "@/schemas/financial";
 
 export function KpiCards({ data }: { data: FinancialSummary }) {
-  const fmt = (n: number) => formatMoney(n, data.currency);
+  const { format: fmt } = useLedgerDisplayFormat(data.currency);
 
   const pendingLabel =
     data.pendingInvoicesAmount != null

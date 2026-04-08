@@ -4,6 +4,7 @@ import { bridgeUpstreamHeaders } from "@/lib/api/bridge-headers";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+/** Proxies FastAPI `POST /api/v1/documents/{document_id}/reprocess` (see deployed OpenAPI). */
 export async function POST(request: NextRequest, ctx: Ctx) {
   const { id } = await ctx.params;
 
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest, ctx: Ctx) {
     return NextResponse.json({ ok: true, document_id: id, job_id: `job_${Date.now()}` });
   }
 
-  const url = new URL(API_ROUTES.documentReparse(id), getApiBaseUrl());
+  const url = new URL(API_ROUTES.documentReprocess(id), getApiBaseUrl());
   const headers = await bridgeUpstreamHeaders(request);
   let res: Response;
   try {

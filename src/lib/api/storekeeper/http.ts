@@ -2,7 +2,7 @@ import { getApiBaseUrl } from "@/lib/config";
 import { ApiError } from "@/lib/api/errors";
 import type { HTTPValidationErrorBody } from "@/lib/api/storekeeper/types";
 
-function joinUrl(base: string, path: string): string {
+export function joinUrl(base: string, path: string): string {
   const b = base.replace(/\/$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
   return `${b}${p}`;

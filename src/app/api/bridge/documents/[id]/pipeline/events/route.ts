@@ -6,6 +6,32 @@ export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+function sseHeaders(contentType: string | null): HeadersInit {
+  return {
+    "Content-Type": contentType ?? "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+  };
+}
+
+/** Published FastAPI OpenAPI has no `/pipeline/events`; avoids breaking the upload UI. */
+function syntheticCompletedStream(documentId: string): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      const payload = {
+        v: 1,
+        type: "pipeline_completed" as const,
+        document_id: documentId,
+        ts: new Date().toISOString(),
+      };
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+      controller.close();
+    },
+  });
+  return new Response(stream, { headers: sseHeaders("text/event-stream") });
+}
+
 export async function GET(request: NextRequest, ctx: Ctx) {
   const { id } = await ctx.params;
 
@@ -62,13 +88,7 @@ export async function GET(request: NextRequest, ctx: Ctx) {
       },
     });
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-      },
-    });
+    return new Response(stream, { headers: sseHeaders("text/event-stream") });
   }
 
   const url = new URL(API_ROUTES.documentPipelineEvents(id), getApiBaseUrl());
@@ -84,6 +104,10 @@ export async function GET(request: NextRequest, ctx: Ctx) {
     return new Response("Upstream unreachable", { status: 503 });
   }
 
+  if (upstream.status === 404 || upstream.status === 405) {
+    return syntheticCompletedStream(id);
+  }
+
   if (!upstream.ok || !upstream.body) {
     return new Response(upstream.body, {
       status: upstream.status,
@@ -92,10 +116,6 @@ export async function GET(request: NextRequest, ctx: Ctx) {
   }
 
   return new Response(upstream.body, {
-    headers: {
-      "Content-Type": upstream.headers.get("Content-Type") ?? "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-    },
+    headers: sseHeaders(upstream.headers.get("Content-Type")),
   });
 }

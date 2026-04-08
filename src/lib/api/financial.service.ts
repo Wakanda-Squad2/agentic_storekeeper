@@ -9,6 +9,8 @@ import {
 } from "@/lib/config";
 import { mockFinancialSummary } from "@/lib/mock-data";
 import { ApiError } from "@/lib/api/errors";
+import { buildFinancialSummaryFromStorekeeper } from "@/lib/api/storekeeper/bridge-adapters";
+import { browserUpstreamHeaders } from "@/lib/api/browser-upstream";
 
 export type FinancialQuery = {
   from?: string;
@@ -39,10 +41,12 @@ export async function loadFinancialSummary(
   }
 
   try {
-    return await fetchJsonValidated(
-      `/api/bridge/financial-summary${buildQuery(query)}`,
-      { schema: financialSummaryNormalizedSchema },
-    );
+    return await buildFinancialSummaryFromStorekeeper(browserUpstreamHeaders(), {
+      from: query.from,
+      to: query.to,
+      category: query.category,
+      vendor: query.vendor,
+    });
   } catch (e) {
     if (allowMockFallback() && e instanceof ApiError) {
       return mockFinancialSummary;

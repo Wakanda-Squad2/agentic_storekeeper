@@ -13,10 +13,12 @@ import {
 } from "lucide-react";
 import { TenantSwitcher } from "@/components/layout/tenant-switcher";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { CurrencySwitcher } from "@/components/layout/currency-switcher";
 import { ToastStack } from "@/components/ui/toast-stack";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { StorekeeperLogo } from "@/components/brand/storekeeper-brand";
+import { DisplayCurrencyProvider } from "@/components/providers/display-currency-provider";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -41,6 +43,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
+    <DisplayCurrencyProvider>
     <div className="flex min-h-screen w-full bg-background">
       <ToastStack />
       <aside className="hidden w-56 shrink-0 border-r border-border bg-surface-2 md:flex md:flex-col">
@@ -88,7 +91,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               Storekeeper
             </Link>
           </div>
-          <div className="ms-auto flex items-center gap-2">
+          <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
+            <CurrencySwitcher />
             <ThemeToggle />
             <NotificationBell />
             <TenantSwitcher />
@@ -98,5 +102,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
       </div>
     </div>
+    </DisplayCurrencyProvider>
   );
 }
