@@ -1,0 +1,21 @@
+# Render Blueprint — Next.js frontend for Agentic Storekeeper
+# Connect this repo in the Render dashboard (New → Blueprint), or add as a Web Service manually.
+# FastAPI upstream is fixed in src/lib/config.ts (FASTAPI_ORIGIN → agentic-storekeeper-backend.onrender.com).
+
+services:
+  - type: web
+    name: agentic-storekeeper-frontend
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22.16.0"
+      - key: NEXT_PUBLIC_USE_MOCK_DATA
+        value: "false"
+      # Session signing — must be ≥32 chars; generated once per service
+      - key: AUTH_SECRET
+        generateValue: true
