@@ -39,7 +39,7 @@ function mergeHeaderBases(
 }
 
 /**
- * Low-level JSON request to the FastAPI backend. Uses `getApiBaseUrl()` (e.g. NEXT_PUBLIC_API_URL).
+ * Low-level JSON request to the FastAPI backend. Uses `getApiBaseUrl()` (fixed origin in config).
  * Pass `forwardHeaders` from the Next.js bridge to propagate `x-tenant-id` / `Authorization`.
  */
 export async function storekeeperJson<T>(

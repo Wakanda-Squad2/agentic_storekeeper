@@ -20,6 +20,7 @@ import {
 } from "@/hooks/use-agent-pipeline-stream";
 import { queryKeys } from "@/lib/queries/query-keys";
 import { useNotificationStore } from "@/stores/notification-store";
+import { formatApiErrorJson } from "@/lib/api/errors";
 
 const ACCEPT = {
   "image/jpeg": [],
