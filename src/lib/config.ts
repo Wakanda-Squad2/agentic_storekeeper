@@ -3,8 +3,15 @@
  * Backend contract: keep paths aligned with FastAPI OpenAPI (see docs/openapi-codegen.md).
  */
 
+/**
+ * Fixed FastAPI origin for all server-side upstream calls (Next.js `/api/bridge/*` → Render).
+ * Intentionally not read from env: misconfigured `NEXT_PUBLIC_API_URL` (e.g. set to this app’s
+ * Vercel URL) caused `fetch` to target the frontend instead of the real API.
+ */
+export const FASTAPI_ORIGIN = "https://agentic-storekeeper-backend.onrender.com";
+
 export function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL ?? "https://agentic-storekeeper-backend.onrender.com";
+  return FASTAPI_ORIGIN;
 }
 
 /**

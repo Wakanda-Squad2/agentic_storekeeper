@@ -16,6 +16,7 @@ import {
 } from "@/hooks/use-agent-pipeline-stream";
 import { queryKeys } from "@/lib/queries/query-keys";
 import { useNotificationStore } from "@/stores/notification-store";
+import { formatApiErrorJson } from "@/lib/api/errors";
 
 const ACCEPT = {
   "image/jpeg": [],
@@ -83,11 +84,7 @@ export function UploadZone() {
       }
 
       if (![200, 201].includes(status)) {
-        const detail =
-          typeof (json as { detail?: string })?.detail === "string"
-            ? (json as { detail: string }).detail
-            : `Upload failed (${status})`;
-        throw new Error(detail);
+        throw new Error(formatApiErrorJson(json, status));
       }
 
       const parsed = documentUploadResponseSchema.safeParse(json);
