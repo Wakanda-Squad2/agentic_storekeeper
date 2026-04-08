@@ -3,8 +3,29 @@
 import { useMemo, useState } from "react";
 import { ExternalLink, FileQuestion } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { getApiBaseUrl } from "@/lib/config";
 import { isImageFile, isPdfFile } from "@/lib/document-preview";
 import { cn } from "@/lib/utils";
+
+/** Shown in preview chrome (title/alt/links) so the FastAPI origin is visible next to the file name. */
+function previewLabel(fileName: string): string {
+  const base = getApiBaseUrl().replace(/\/$/, "");
+  return `${fileName} · ${base}`;
+}
+
+/** Suggested download name: original name + backend host (filesystem-safe). */
+function previewDownloadName(fileName: string): string {
+  let host: string;
+  try {
+    host = new URL(getApiBaseUrl()).hostname;
+  } catch {
+    host = "api";
+  }
+  const safe = host.replace(/[^a-zA-Z0-9.-]+/g, "_");
+  const dot = fileName.lastIndexOf(".");
+  if (dot <= 0) return `${fileName}__${safe}`;
+  return `${fileName.slice(0, dot)}__${safe}${fileName.slice(dot)}`;
+}
 
 type Props = {
   documentId: string;
@@ -21,6 +42,9 @@ export function DocumentPreview({ documentId, fileName, mimeType, className }: P
     [documentId],
   );
 
+  const labeledName = useMemo(() => previewLabel(fileName), [fileName]);
+  const downloadName = useMemo(() => previewDownloadName(fileName), [fileName]);
+
   const pdf = isPdfFile(fileName, mimeType);
   const image = !pdf && isImageFile(fileName, mimeType);
 
@@ -33,7 +57,7 @@ export function DocumentPreview({ documentId, fileName, mimeType, className }: P
         )}
       >
         <iframe
-          title={`PDF preview: ${fileName}`}
+          title={`PDF preview: ${labeledName}`}
           src={fileUrl}
           className="min-h-[480px] w-full flex-1 border-0 bg-background"
         />
@@ -42,6 +66,8 @@ export function DocumentPreview({ documentId, fileName, mimeType, className }: P
             href={fileUrl}
             target="_blank"
             rel="noreferrer"
+            title={labeledName}
+            download={downloadName}
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             <ExternalLink className="me-1 size-3.5" />
@@ -62,12 +88,16 @@ export function DocumentPreview({ documentId, fileName, mimeType, className }: P
       >
         <div className="relative flex max-h-[min(70vh,640px)] min-h-[280px] flex-1 items-center justify-center overflow-auto bg-zinc-950/5 dark:bg-zinc-950/40">
           {mediaError ? (
-            <Fallback fileName={fileName} fileUrl={fileUrl} reason="Could not load image preview." />
+            <Fallback
+              labeledName={labeledName}
+              fileUrl={fileUrl}
+              reason="Could not load image preview."
+            />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element -- dynamic binary URL from bridge
             <img
               src={fileUrl}
-              alt={fileName}
+              alt={labeledName}
               className="max-h-full max-w-full object-contain"
               onError={() => setMediaError(true)}
             />
@@ -78,6 +108,8 @@ export function DocumentPreview({ documentId, fileName, mimeType, className }: P
             href={fileUrl}
             target="_blank"
             rel="noreferrer"
+            title={labeledName}
+            download={downloadName}
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             <ExternalLink className="me-1 size-3.5" />
@@ -106,6 +138,8 @@ export function DocumentPreview({ documentId, fileName, mimeType, className }: P
         href={fileUrl}
         target="_blank"
         rel="noreferrer"
+        title={labeledName}
+        download={downloadName}
         className={buttonVariants({ variant: "outline", size: "sm" })}
       >
         <ExternalLink className="me-1 size-3.5" />
@@ -116,11 +150,11 @@ export function DocumentPreview({ documentId, fileName, mimeType, className }: P
 }
 
 function Fallback({
-  fileName,
+  labeledName,
   fileUrl,
   reason,
 }: {
-  fileName: string;
+  labeledName: string;
   fileUrl: string;
   reason: string;
 }) {
@@ -131,10 +165,11 @@ function Fallback({
         href={fileUrl}
         target="_blank"
         rel="noreferrer"
+        title={labeledName}
         className={buttonVariants({ variant: "outline", size: "sm" })}
       >
         <ExternalLink className="me-1 size-3.5" />
-        Open {fileName}
+        Open file
       </a>
     </div>
   );

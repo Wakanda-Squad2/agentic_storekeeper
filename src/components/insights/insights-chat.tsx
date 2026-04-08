@@ -75,15 +75,37 @@ function figuresFromChatData(data: unknown): InsightAnswer["figures"] {
   return out;
 }
 
+/** Prefer top-level `figures`; else `data.figures` (common FastAPI wrapper). */
+function figuresFromAskDocumentPayload(body: Record<string, unknown>): InsightAnswer["figures"] {
+  const top = figuresFromChatData(body);
+  if (top.length) return top;
+  const d = body.data;
+  if (d && typeof d === "object") return figuresFromChatData(d);
+  return [];
+}
+
+const SUMMARY_KEYS = ["answer", "summary", "response", "message", "text"] as const;
+
+function stringSummaryFromRecord(o: Record<string, unknown>): string | undefined {
+  for (const k of SUMMARY_KEYS) {
+    const v = o[k];
+    if (typeof v === "string" && v.trim()) return v;
+  }
+  return undefined;
+}
+
 /** FastAPI `ask-about-document` response shape is open; normalize to a summary string. */
 function summaryFromAskDocumentBody(body: unknown): string {
   if (body == null) return "";
   if (typeof body === "string") return body;
   if (typeof body === "object") {
     const o = body as Record<string, unknown>;
-    for (const k of ["answer", "summary", "response", "message", "text"]) {
-      const v = o[k];
-      if (typeof v === "string" && v.trim()) return v;
+    const top = stringSummaryFromRecord(o);
+    if (top) return top;
+    const data = o.data;
+    if (data && typeof data === "object") {
+      const nested = stringSummaryFromRecord(data as Record<string, unknown>);
+      if (nested) return nested;
     }
     try {
       return JSON.stringify(body, null, 2);
@@ -167,15 +189,11 @@ export function InsightsChat({
         }
         const body = json as Record<string, unknown>;
         const summary = summaryFromAskDocumentBody(body);
-        const data =
-          body.data && typeof body.data === "object"
-            ? (body.data as Record<string, unknown>)
-            : body;
         setAnswer(
           insightAnswerSchema.parse({
             question: parsed.data.question,
             summary,
-            figures: figuresFromChatData(data),
+            figures: figuresFromAskDocumentPayload(body),
           }),
         );
       } else {
