@@ -48,7 +48,7 @@ export function StorekeeperBrand({
       <div className={cn("flex items-center gap-3", className)}>
         <StorekeeperLogo className={logoClass} />
         <span className={cn("font-heading text-foreground", titleClass)}>
-          Storekeeper
+          Daftar
         </span>
       </div>
     );
@@ -60,7 +60,7 @@ export function StorekeeperBrand({
     >
       <StorekeeperLogo className={logoClass} />
       <span className={cn("font-heading text-foreground", titleClass)}>
-        Storekeeper
+        Daftar
       </span>
     </div>
   );

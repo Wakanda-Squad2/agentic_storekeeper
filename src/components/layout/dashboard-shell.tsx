@@ -53,7 +53,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-2 font-semibold tracking-tight text-foreground"
           >
             <StorekeeperLogo className="size-8" />
-            Storekeeper
+            Daftar
           </Link>
         </div>
         <nav className="flex flex-1 flex-col gap-1 p-2">
