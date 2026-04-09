@@ -21,8 +21,6 @@ const ledgerRowSchema = z.object({
   category: z.string(),
   amount: z.number().finite(),
   direction: z.enum(["expense", "income"]),
-  /** ISO 4217 from API (`currency` on TransactionResponse). */
-  currency: z.string().min(1).default("NGN"),
 });
 
 const listResponseSchema = z.object({

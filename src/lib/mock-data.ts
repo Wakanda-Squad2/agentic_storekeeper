@@ -48,7 +48,6 @@ export type MockLedgerRow = {
   category: string;
   amount: number;
   direction: "expense" | "income";
-  currency: string;
 };
 
 export const mockLedgerTransactions: MockLedgerRow[] = [
@@ -60,7 +59,6 @@ export const mockLedgerTransactions: MockLedgerRow[] = [
     category: "fuel",
     amount: 412.05,
     direction: "expense",
-    currency: "USD",
   },
   {
     id: "tx_002",
@@ -70,7 +68,6 @@ export const mockLedgerTransactions: MockLedgerRow[] = [
     category: "office_supplies",
     amount: 189.2,
     direction: "expense",
-    currency: "USD",
   },
   {
     id: "tx_003",
@@ -80,7 +77,6 @@ export const mockLedgerTransactions: MockLedgerRow[] = [
     category: "Software",
     amount: 3200,
     direction: "expense",
-    currency: "USD",
   },
   {
     id: "tx_004",
@@ -90,7 +86,6 @@ export const mockLedgerTransactions: MockLedgerRow[] = [
     category: "rent",
     amount: 8500,
     direction: "expense",
-    currency: "USD",
   },
   {
     id: "tx_005",
@@ -100,7 +95,6 @@ export const mockLedgerTransactions: MockLedgerRow[] = [
     category: "Sales",
     amount: 4200,
     direction: "income",
-    currency: "USD",
   },
   {
     id: "tx_006",
@@ -110,7 +104,6 @@ export const mockLedgerTransactions: MockLedgerRow[] = [
     category: "Sales",
     amount: 6100,
     direction: "income",
-    currency: "USD",
   },
   {
     id: "tx_007",
@@ -120,7 +113,6 @@ export const mockLedgerTransactions: MockLedgerRow[] = [
     category: "utilities",
     amount: 890,
     direction: "expense",
-    currency: "USD",
   },
 ];
 
