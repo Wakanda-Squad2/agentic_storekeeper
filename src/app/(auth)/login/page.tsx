@@ -23,8 +23,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
           <CardDescription>
-            Sign in with a demo account or credentials you used at registration. Auth is handled
-            by this app (no separate API login).
+            Sign in with a demo account 
           </CardDescription>
         </CardHeader>
         <CardContent>
