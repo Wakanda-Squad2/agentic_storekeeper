@@ -38,9 +38,8 @@ export function ExpensesReportView() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Expenses</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Category split from <strong>expense</strong> transaction lines via{" "}
-            <code className="rounded bg-muted px-1">/api/bridge/transactions</code> (same data as
-            Transactions and Cash flow).
+            Category split from <strong>expense</strong> transaction
+            
           </p>
         </div>
         <Button

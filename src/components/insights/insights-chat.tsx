@@ -303,9 +303,7 @@ export function InsightsChat({
             <p className="text-muted-foreground mt-4 text-xs">
               {mockOnly ? (
                 <>
-                  Mock mode uses local sample data. Set{" "}
-                  <code className="rounded bg-muted px-1">NEXT_PUBLIC_USE_MOCK_DATA=false</code> for
-                  live FastAPI.
+                  
                 </>
               ) : documentScoped ? (
                 <>

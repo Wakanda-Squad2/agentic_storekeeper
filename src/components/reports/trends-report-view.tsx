@@ -40,7 +40,6 @@ export function TrendsReportView() {
           <h1 className="text-2xl font-semibold tracking-tight">Trends</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             Revenue vs expenses by month from <strong>income</strong> and <strong>expense</strong>{" "}
-            lines in <code className="rounded bg-muted px-1">/api/bridge/transactions</code>.
           </p>
         </div>
         <Button

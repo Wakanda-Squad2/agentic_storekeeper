@@ -66,10 +66,6 @@ export function CashflowSummaryView() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Cash flow</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Built from transaction lines (income vs expense) grouped by month. Same data as{" "}
-            <span className="text-foreground">Transactions</span> — no separate reports API.
-          </p>
         </div>
         <Button
           type="button"

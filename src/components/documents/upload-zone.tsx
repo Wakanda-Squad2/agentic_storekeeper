@@ -307,7 +307,7 @@ export function UploadZone() {
         ) : null}
       </div>
 
-      <AgentWorkflowStepper steps={steps} />
+      {/* <AgentWorkflowStepper steps={steps} /> */}
     </div>
   );
 }

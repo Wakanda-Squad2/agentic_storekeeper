@@ -116,11 +116,7 @@ export function DocumentDetailClient({ documentId }: Props) {
       <Card className="min-h-[420px]">
         <CardHeader>
           <CardTitle className="text-base">Original preview</CardTitle>
-          <p className="text-muted-foreground text-sm">
-            Live preview uses <code className="rounded bg-muted px-1">file_path</code> from{" "}
-            <code className="rounded bg-muted px-1">GET /api/v1/documents/{"{id}"}</code>, then falls back to{" "}
-            <code className="rounded bg-muted px-1">/file</code> if needed. Mock mode uses sample assets via the bridge.
-          </p>
+          
         </CardHeader>
         <CardContent>
           <DocumentPreview

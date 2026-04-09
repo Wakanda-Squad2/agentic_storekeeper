@@ -79,11 +79,7 @@ export function TransactionsView() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
-        <p className="text-muted-foreground">
-          {mockData
-            ? "Demo ledger from mock data. Set NEXT_PUBLIC_USE_MOCK_DATA=false to load from FastAPI."
-            : "Loaded via the Next.js bridge from GET /api/v1/transactions/."}
-        </p>
+
       </div>
 
       {q.error ? (

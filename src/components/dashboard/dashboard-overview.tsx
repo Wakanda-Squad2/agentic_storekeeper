@@ -65,10 +65,6 @@ export function DashboardOverview() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-          <p className="text-muted-foreground">
-            Data is validated with Zod before charts render. Use filters to
-            narrow views until backend query params match.
-          </p>
         </div>
         <Button
           type="button"
