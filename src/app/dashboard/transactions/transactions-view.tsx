@@ -17,7 +17,7 @@ import { queryKeys } from "@/lib/queries/query-keys";
 import { isApiError } from "@/lib/api/errors";
 import { useMockDataOnly } from "@/lib/config";
 import { ledgerCurrencyFromMockMode } from "@/lib/currency/ledger-currency";
-import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
+import { TransactionAmountCell } from "@/components/transactions/transaction-amount-cell";
 import { TransactionEditModal } from "@/components/transactions/transaction-edit-modal";
 import { useToastStore } from "@/stores/toast-store";
 
@@ -39,8 +39,7 @@ export function TransactionsView() {
     [category, vendor],
   );
 
-  const currencyCode = ledgerCurrencyFromMockMode(mockData);
-  const { format: formatDisplayMoney } = useLedgerDisplayFormat(currencyCode);
+  const fallbackCurrency = ledgerCurrencyFromMockMode(mockData);
 
   const q = useQuery({
     queryKey: queryKeys.transactions.list(filters),
@@ -161,8 +160,7 @@ export function TransactionsView() {
                         : "py-2 text-right tabular-nums"
                     }
                   >
-                    {r.direction === "income" ? "+" : "−"}
-                    {formatDisplayMoney(r.amount, { maximumFractionDigits: 2 })}
+                    <TransactionAmountCell row={r} />
                   </td>
                   <td className="py-2 pl-2 text-right">
                     <div className="flex justify-end gap-1">
@@ -220,7 +218,7 @@ export function TransactionsView() {
         onOpenChange={(o) => {
           if (!o) setEditing(null);
         }}
-        currencyCode={currencyCode}
+        currencyCode={editing?.currency ?? fallbackCurrency}
         onSaved={() => {
           void qc.invalidateQueries({ queryKey: queryKeys.transactions.list(filters) });
           setEditing(null);
