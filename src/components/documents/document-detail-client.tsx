@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { loadDocumentById } from "@/lib/api/documents.service";
-import { useMockDataOnly, API_ROUTES } from "@/lib/config";
-import { apiAbsoluteUrl, browserUpstreamHeaders } from "@/lib/api/browser-upstream";
 import { queryKeys } from "@/lib/queries/query-keys";
 import { useNotificationStore } from "@/stores/notification-store";
 import { isApiError } from "@/lib/api/errors";
@@ -20,7 +18,6 @@ import { DocumentPreview } from "./document-preview";
 type Props = { documentId: string };
 
 export function DocumentDetailClient({ documentId }: Props) {
-  const mockData = useMockDataOnly();
   const push = useNotificationStore((s) => s.push);
 
   const docQuery = useQuery({
@@ -36,14 +33,10 @@ export function DocumentDetailClient({ documentId }: Props) {
 
   const reprocess = useMutation({
     mutationFn: async () => {
-      const url = mockData
-        ? `/api/bridge/documents/${documentId}/reprocess`
-        : apiAbsoluteUrl(API_ROUTES.documentReprocess(documentId));
-      const res = await fetch(url, {
-        method: "POST",
-        headers: mockData ? undefined : browserUpstreamHeaders(),
-        credentials: mockData ? "include" : "omit",
-      });
+      const res = await fetch(
+        `/api/bridge/documents/${documentId}/agents/reparse`,
+        { method: "POST" },
+      );
       if (!res.ok) throw new Error(`Re-run failed (${res.status})`);
     },
     onSuccess: () => {
@@ -116,14 +109,17 @@ export function DocumentDetailClient({ documentId }: Props) {
       <Card className="min-h-[420px]">
         <CardHeader>
           <CardTitle className="text-base">Original preview</CardTitle>
-          
+          <p className="text-muted-foreground text-sm">
+            PDFs and images load through{" "}
+            <code className="rounded bg-muted px-1">/api/bridge/documents/…/file</code> (proxied from
+            FastAPI). Mock mode uses sample assets.
+          </p>
         </CardHeader>
         <CardContent>
           <DocumentPreview
             documentId={documentId}
             fileName={docMeta.name}
             mimeType={docMeta.mimeType}
-            filePath={docMeta.filePath}
           />
         </CardContent>
       </Card>

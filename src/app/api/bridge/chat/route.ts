@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { useMockDataOnly } from "@/lib/config";
+import { useMockDataOnly } from "@/lib/config";
 import { bridgeUpstreamHeaders } from "@/lib/api/bridge-headers";
 import { storekeeperJson } from "@/lib/api/storekeeper/http";
 import type { ChatRequest, ChatResponse } from "@/lib/api/storekeeper/types";
@@ -22,6 +23,15 @@ export async function POST(request: NextRequest) {
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ detail: "Validation failed", issues: parsed.error.flatten() }, { status: 422 });
+  }
+
+  if (useMockDataOnly()) {
+    const res: ChatResponse = {
+      answer:
+        "Mock mode: set NEXT_PUBLIC_USE_MOCK_DATA=false and run FastAPI to get live answers.",
+      data: { mode: "mock" },
+    };
+    return NextResponse.json(res);
   }
 
   if (useMockDataOnly()) {

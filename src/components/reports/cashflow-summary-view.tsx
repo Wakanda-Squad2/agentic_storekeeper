@@ -28,15 +28,14 @@ import { loadTransactions } from "@/lib/api/transactions.service";
 import { queryKeys } from "@/lib/queries/query-keys";
 import { isApiError } from "@/lib/api/errors";
 import { useMockDataOnly } from "@/lib/config";
-import { ledgerCurrencyFromMockMode } from "@/lib/currency/ledger-currency";
 import { buildCashflowFromTransactions } from "@/lib/cashflow/from-transactions";
-import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
+import { formatMoney } from "@/lib/format-money";
 
 const emptyFilters = {} as const;
 
 export function CashflowSummaryView() {
   const mockOnly = useMockDataOnly();
-  const ledgerCode = ledgerCurrencyFromMockMode(mockOnly);
+  const currency = mockOnly ? "USD" : "NGN";
 
   const q = useQuery({
     queryKey: queryKeys.transactions.list(emptyFilters),
@@ -44,21 +43,21 @@ export function CashflowSummaryView() {
   });
 
   const summary = useMemo(
-    () => buildCashflowFromTransactions(q.data ?? [], ledgerCode),
-    [q.data, ledgerCode],
+    () => buildCashflowFromTransactions(q.data ?? [], currency),
+    [q.data, currency],
   );
 
-  const { format: fmt, convert } = useLedgerDisplayFormat(summary.currency);
+  const fmt = (n: number) => formatMoney(n, summary.currency);
 
   const chartData = useMemo(
     () =>
       summary.periods.map((p) => ({
         label: p.label,
-        inflows: convert(p.inflows),
-        outflows: convert(p.outflows),
-        net: convert(p.net),
+        inflows: p.inflows,
+        outflows: p.outflows,
+        net: p.net,
       })),
-    [summary.periods, convert],
+    [summary.periods],
   );
 
   return (
@@ -66,6 +65,10 @@ export function CashflowSummaryView() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Cash flow</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Built from transaction lines (income vs expense) grouped by month. Same data as{" "}
+            <span className="text-foreground">Transactions</span> — no separate reports API.
+          </p>
         </div>
         <Button
           type="button"

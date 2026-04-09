@@ -28,6 +28,11 @@ export function DocumentsView() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
+        <p className="text-muted-foreground">
+          Uploads post to FastAPI via the Next.js bridge (multipart{" "}
+          <code className="rounded bg-muted px-1">file</code> per request). Pipeline SSE still uses
+          bridge routes when enabled.
+        </p>
       </div>
 
       <UploadZone />

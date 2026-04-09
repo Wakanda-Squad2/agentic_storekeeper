@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, TENANT_COOKIE } from "@/lib/auth/constants";
 import { verifySession } from "@/lib/auth/jwt";
-import { useMockDataOnly } from "@/lib/config";
 
 async function readSession(request: NextRequest) {
   const raw = request.cookies.get(SESSION_COOKIE)?.value;
@@ -10,10 +9,14 @@ async function readSession(request: NextRequest) {
   return verifySession(raw);
 }
 
+function isMockMode(): boolean {
+  return process.env.NEXT_PUBLIC_USE_MOCK_DATA !== "false";
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const session = await readSession(request);
-  const mock = useMockDataOnly();
+  const mock = isMockMode();
 
   if (pathname.startsWith("/api/bridge")) {
     if (!mock && !session) {

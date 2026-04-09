@@ -8,8 +8,6 @@ type FetchJsonOptions<T> = {
   body?: BodyInit | null;
   headers?: HeadersInit;
   signal?: AbortSignal;
-  /** Default `include` (same-origin cookies). Use `omit` for cross-origin FastAPI. */
-  credentials?: RequestCredentials;
 };
 
 /**
@@ -18,21 +16,14 @@ type FetchJsonOptions<T> = {
  */
 export async function fetchJsonValidated<T>(
   url: string,
-  {
-    schema,
-    method = "GET",
-    body,
-    headers,
-    signal,
-    credentials = "include",
-  }: FetchJsonOptions<T>,
+  { schema, method = "GET", body, headers, signal }: FetchJsonOptions<T>,
 ): Promise<T> {
   const res = await fetch(url, {
     method,
     body,
     headers,
     signal,
-    credentials,
+    credentials: "include",
   });
 
   const text = await res.text();

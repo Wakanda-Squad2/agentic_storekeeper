@@ -5,7 +5,6 @@ import { storekeeperJson } from "@/lib/api/storekeeper/http";
 import type { TransactionResponse } from "@/lib/api/storekeeper/types";
 import { ApiError } from "@/lib/api/errors";
 import { z } from "zod";
-import { mapTransactionToLedgerRow } from "@/lib/api/map-transaction";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -19,10 +18,23 @@ const patchBodySchema = z
     category: z.string().nullable().optional(),
     vendor: z.string().nullable().optional(),
     reference: z.string().nullable().optional(),
-    classification_reasoning: z.string().nullable().optional(),
     confidence: z.number().nullable().optional(),
   })
   .strict();
+
+function mapTransaction(t: TransactionResponse) {
+  const amount = Math.abs(Number(t.amount));
+  const direction = t.type?.toLowerCase() === "income" ? "income" : "expense";
+  return {
+    id: String(t.id),
+    postedAt: t.date,
+    description: t.description,
+    vendor: t.vendor?.trim() || "—",
+    category: t.category?.trim() || "—",
+    amount,
+    direction,
+  };
+}
 
 export async function PATCH(request: NextRequest, ctx: Ctx) {
   const { id } = await ctx.params;
@@ -75,7 +87,7 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
       },
       headers,
     );
-    return NextResponse.json({ item: mapTransactionToLedgerRow(updated) });
+    return NextResponse.json({ item: mapTransaction(updated) });
   } catch (e) {
     if (e instanceof ApiError) {
       return NextResponse.json(

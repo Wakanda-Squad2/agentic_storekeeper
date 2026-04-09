@@ -11,15 +11,14 @@ import { loadTransactions } from "@/lib/api/transactions.service";
 import { queryKeys } from "@/lib/queries/query-keys";
 import { isApiError } from "@/lib/api/errors";
 import { useMockDataOnly } from "@/lib/config";
-import { ledgerCurrencyFromMockMode } from "@/lib/currency/ledger-currency";
 import { buildFinancialSummaryFromLedgerRows } from "@/lib/transactions/build-financial-summary";
-import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
+import { formatMoney } from "@/lib/format-money";
 
 const emptyFilters = {} as const;
 
 export function TrendsReportView() {
   const mockOnly = useMockDataOnly();
-  const ledgerCode = ledgerCurrencyFromMockMode(mockOnly);
+  const currency = mockOnly ? "USD" : "NGN";
 
   const q = useQuery({
     queryKey: queryKeys.transactions.list(emptyFilters),
@@ -27,11 +26,9 @@ export function TrendsReportView() {
   });
 
   const summary = useMemo(
-    () => buildFinancialSummaryFromLedgerRows(q.data ?? [], ledgerCode),
-    [q.data, ledgerCode],
+    () => buildFinancialSummaryFromLedgerRows(q.data ?? [], currency),
+    [q.data, currency],
   );
-
-  const { format: formatMoney } = useLedgerDisplayFormat(summary.currency);
 
   return (
     <div className="space-y-6">
@@ -40,6 +37,7 @@ export function TrendsReportView() {
           <h1 className="text-2xl font-semibold tracking-tight">Trends</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             Revenue vs expenses by month from <strong>income</strong> and <strong>expense</strong>{" "}
+            lines in <code className="rounded bg-muted px-1">/api/bridge/transactions</code>.
           </p>
         </div>
         <Button
@@ -89,7 +87,7 @@ export function TrendsReportView() {
               </CardHeader>
               <CardContent>
                 <p className="text-success text-xl font-semibold tabular-nums">
-                  {formatMoney(summary.totalRevenue, {
+                  {formatMoney(summary.totalRevenue, summary.currency, {
                     maximumFractionDigits: 0,
                   })}
                 </p>
@@ -103,7 +101,7 @@ export function TrendsReportView() {
               </CardHeader>
               <CardContent>
                 <p className="text-destructive text-xl font-semibold tabular-nums">
-                  {formatMoney(summary.totalExpenses, {
+                  {formatMoney(summary.totalExpenses, summary.currency, {
                     maximumFractionDigits: 0,
                   })}
                 </p>
@@ -123,7 +121,7 @@ export function TrendsReportView() {
                       : "text-destructive text-xl font-semibold tabular-nums"
                   }
                 >
-                  {formatMoney(summary.netProfit, {
+                  {formatMoney(summary.netProfit, summary.currency, {
                     maximumFractionDigits: 0,
                   })}
                 </p>

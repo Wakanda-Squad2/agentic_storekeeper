@@ -7,14 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { insightAnswerSchema, type InsightAnswer } from "@/schemas/financial";
-import { InsightSummaryMarkdown } from "@/components/insights/insight-summary-markdown";
 import { z } from "zod";
 import { useMockDataOnly } from "@/lib/config";
-import { storekeeperJson } from "@/lib/api/storekeeper/http";
-import type { ChatResponse } from "@/lib/api/storekeeper/types";
-import { browserUpstreamHeaders } from "@/lib/api/browser-upstream";
-import { ApiError } from "@/lib/api/errors";
-import { useLedgerDisplayFormat } from "@/hooks/use-ledger-display-format";
 
 const questionSchema = z.object({
   question: z.string().min(4, "Ask a fuller question"),
@@ -128,21 +122,6 @@ function parseNumericDocumentId(documentId: string | undefined): number | null {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
 }
 
-function InsightFigureAmount({
-  value,
-  currency,
-}: {
-  value: number;
-  currency: string;
-}) {
-  const { format } = useLedgerDisplayFormat(currency);
-  return (
-    <span className="font-medium">
-      {format(value, { maximumFractionDigits: 2 })}
-    </span>
-  );
-}
-
 export function InsightsChat({
   documentId,
   documentTitle,
@@ -191,25 +170,24 @@ export function InsightsChat({
             "This document id is not a numeric FastAPI id. Open a document from the API-backed list, or ask from Insights without a document scope.",
           );
         }
-        let body: Record<string, unknown>;
-        try {
-          body = await storekeeperJson<Record<string, unknown>>(
-            "/api/v1/chat/ask-about-document",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              // OpenAPI: required `document_id`, `question`; optional `tenant_id`. Tenant is sent via `x-tenant-id` (see browserUpstreamHeaders).
-              body: JSON.stringify({
-                document_id: numericDocId,
-                question: parsed.data.question,
-              }),
-            },
-            browserUpstreamHeaders(),
-          );
-        } catch (e) {
-          if (e instanceof ApiError) throw new Error(e.message);
-          throw e;
+        const res = await fetch("/api/bridge/chat/ask-document", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            document_id: numericDocId,
+            question: parsed.data.question,
+          }),
+        });
+        const json: unknown = await res.json().catch(() => null);
+        if (!res.ok) {
+          const detail =
+            typeof (json as { detail?: string })?.detail === "string"
+              ? (json as { detail: string }).detail
+              : `Request failed (${res.status})`;
+          throw new Error(detail);
         }
+        const body = json as Record<string, unknown>;
         const summary = summaryFromAskDocumentBody(body);
         setAnswer(
           insightAnswerSchema.parse({
@@ -219,23 +197,21 @@ export function InsightsChat({
           }),
         );
       } else {
-        let body: ChatResponse;
-        try {
-          body = await storekeeperJson<ChatResponse>(
-            "/api/v1/chat/",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                message: parsed.data.question,
-              }),
-            },
-            browserUpstreamHeaders(),
-          );
-        } catch (e) {
-          if (e instanceof ApiError) throw new Error(e.message);
-          throw e;
+        const res = await fetch("/api/bridge/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ message: parsed.data.question }),
+        });
+        const json: unknown = await res.json().catch(() => null);
+        if (!res.ok) {
+          const detail =
+            typeof (json as { detail?: string })?.detail === "string"
+              ? (json as { detail: string }).detail
+              : `Request failed (${res.status})`;
+          throw new Error(detail);
         }
+        const body = json as { answer?: string; data?: Record<string, unknown> };
         const summary = typeof body.answer === "string" ? body.answer : "";
         setAnswer(
           insightAnswerSchema.parse({
@@ -254,8 +230,8 @@ export function InsightsChat({
 
   const title = documentScoped
     ? documentTitle
-      ? `Ask about this document · ${documentTitle}`
-      : "Ask about this document"
+      ? `Ask about this upload · ${documentTitle}`
+      : "Ask about this upload"
     : "Ask the insight agent";
 
   const placeholder = documentScoped
@@ -273,8 +249,7 @@ export function InsightsChat({
             </CardTitle>
             {documentScoped && numericDocId != null ? (
               <p className="text-muted-foreground text-xs">
-                Document id <span className="font-mono text-foreground">{numericDocId}</span> ·
-                routed to <code className="rounded bg-muted px-1">/api/v1/chat/ask-about-document</code>
+                Document id <span className="font-mono text-foreground">{numericDocId}</span> 
               </p>
             ) : null}
           </CardHeader>
@@ -297,10 +272,31 @@ export function InsightsChat({
               </div>
               <Button type="submit" disabled={loading}>
                 {loading && <Loader2 className="me-2 size-4 animate-spin" />}
-                {mockOnly ? "Run demo answer" : documentScoped ? "Ask about upload" : "Get Insights"}
+                {mockOnly ? "Run demo answer" : documentScoped ? "Ask about upload" : "Ask (FastAPI)"}
               </Button>
             </form>
-            
+            <p className="text-muted-foreground mt-4 text-xs">
+              {mockOnly ? (
+                <>
+                  Mock mode uses local sample data. Set{" "}
+                  <code className="rounded bg-muted px-1">NEXT_PUBLIC_USE_MOCK_DATA=false</code> for
+                  live FastAPI.
+                </>
+              ) : documentScoped ? (
+                <>
+                  Upload-scoped questions use the bridge{" "}
+                  <code className="rounded bg-muted px-1">/api/bridge/chat/ask-document</code> →
+                  FastAPI ask-about-document.
+                </>
+              ) : (
+                <>
+                  General questions use{" "}
+                  <code className="rounded bg-muted px-1">/api/bridge/chat</code>; figures render when
+                  the model returns a <code className="rounded bg-muted px-1">figures</code> array in{" "}
+                  <code className="rounded bg-muted px-1">data</code>.
+                </>
+              )}
+            </p>
           </CardContent>
         </Card>
 
@@ -317,9 +313,7 @@ export function InsightsChat({
               <div className="space-y-4">
                 <div>
                   <p className="text-muted-foreground text-xs font-medium uppercase">Summary</p>
-                  <div className="mt-1">
-                    <InsightSummaryMarkdown>{answer.summary}</InsightSummaryMarkdown>
-                  </div>
+                  <p className="mt-1 text-sm whitespace-pre-wrap">{answer.summary}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs font-medium uppercase">Figures</p>
@@ -330,7 +324,12 @@ export function InsightsChat({
                         className="flex justify-between gap-4 text-sm tabular-nums"
                       >
                         <span>{f.label}</span>
-                        <InsightFigureAmount value={f.value} currency={f.currency} />
+                        <span className="font-medium">
+                          {new Intl.NumberFormat("en-US", {
+                            style: "currency",
+                            currency: f.currency,
+                          }).format(f.value)}
+                        </span>
                       </li>
                     ))}
                   </ul>
