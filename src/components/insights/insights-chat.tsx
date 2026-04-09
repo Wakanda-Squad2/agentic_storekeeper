@@ -254,8 +254,8 @@ export function InsightsChat({
 
   const title = documentScoped
     ? documentTitle
-      ? `Ask about this upload · ${documentTitle}`
-      : "Ask about this upload"
+      ? `Ask about this document · ${documentTitle}`
+      : "Ask about this document"
     : "Ask the insight agent";
 
   const placeholder = documentScoped
@@ -300,26 +300,7 @@ export function InsightsChat({
                 {mockOnly ? "Run demo answer" : documentScoped ? "Ask about upload" : "Get Insights"}
               </Button>
             </form>
-            <p className="text-muted-foreground mt-4 text-xs">
-              {mockOnly ? (
-                <>
-                  
-                </>
-              ) : documentScoped ? (
-                <>
-                  Upload-scoped questions call{" "}
-                  <code className="rounded bg-muted px-1">POST /api/v1/chat/ask-about-document</code> on
-                  your API origin.
-                </>
-              ) : (
-                <>
-                  General questions call{" "}
-                  <code className="rounded bg-muted px-1">POST /api/v1/chat/</code>; figures render when
-                  the model returns a <code className="rounded bg-muted px-1">figures</code> array in{" "}
-                  <code className="rounded bg-muted px-1">data</code>.
-                </>
-              )}
-            </p>
+            
           </CardContent>
         </Card>
 
